@@ -3,7 +3,7 @@
 *.pyc
 
 # YOLO files
-YOLO_MODEL/
+YOLO_MODEL/*
 
 # MSTN files
 MSTN_MODEL/MSTN_models/training

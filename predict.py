@@ -42,7 +42,7 @@ def main():
     )
     """
 
-    
+    """
     label_with_YOLO(
         yolo_test_dir, 
         test_yolo_picture_number,
@@ -57,7 +57,7 @@ def main():
         start_number=test_pictuce_start_number, 
         save_picture_with_box=True
     )
-    
+    """
 
     
     MSTN_train_set_init(
@@ -71,7 +71,7 @@ def main():
     
     
     
-    """
+    
     label_hard_pic_with_MSTN(
         yolo_result_dir,
         mstn_train_img_dir,
@@ -87,7 +87,7 @@ def main():
         model_name="towncenter",
         train_epoch=400,
     )
-    """
+    
     
     
     #model_summary(
