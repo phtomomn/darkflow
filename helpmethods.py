@@ -435,7 +435,8 @@ def label_with_YOLO(
         pb="./YOLO_MODEL/built_graph/yolo_test2.pb",
         meta="./YOLO_MODEL/built_graph/yolo_test2.meta",
         model='null',
-        load='null'
+        load='null',
+        use_gpu=False
     ):
     """
     使用训练好的yolo模型分类测试图片为正、负、hard三类，并将测试结果box储存为新图片
@@ -443,22 +444,18 @@ def label_with_YOLO(
         IoU：每张测试图片的IoU
     """
 
+    options = {
+        "config": "./YOLO_MODEL/cfg/",
+        "threshold": 0.08
+    }
+
     if model == 'null':
-        options = {
-            "pbLoad": pb,
-            "metaLoad": meta,
-            "config": "./YOLO_MODEL/cfg/",
-            #"gpu":1.0,
-            "threshold": 0.08
-        }
+        options.update({"pbLoad": pb, "metaLoad": meta})
     else:
-        options = {
-            "model": model, 
-            "load": load,
-            "config": "./YOLO_MODEL/cfg/",
-            #"gpu":1.0,
-            "threshold": 0.08
-        }
+        options.update({"model": model, "load": load})
+
+    if use_gpu:
+        options.update({"gpu":1.0})
 
     tfnet = TFNet(options)
 

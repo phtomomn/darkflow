@@ -42,7 +42,7 @@ def main():
     )
     """
 
-    """
+    
     label_with_YOLO(
         yolo_test_dir, 
         test_yolo_picture_number,
@@ -51,6 +51,7 @@ def main():
         chigh, 
         #pb="./YOLO_MODEL/built_graph/yolo_test2.pb",
         #meta="./YOLO_MODEL/built_graph/yolo_test2.meta",
+        use_gpu=True,
         model="./YOLO_MODEL/cfg/yolo.cfg",
         load="./YOLO_MODEL/bin/yolo.weights",
         start_number=test_pictuce_start_number, 
@@ -66,11 +67,11 @@ def main():
         pic_num_for_train_MSTN=100,
         positive_score_limit=0.2
     )
+    
+    
+    
+    
     """
-    
-    
-    
-    
     label_hard_pic_with_MSTN(
         yolo_result_dir,
         mstn_train_img_dir,
@@ -86,7 +87,7 @@ def main():
         model_name="towncenter",
         train_epoch=400,
     )
-    
+    """
     
     
     #model_summary(
