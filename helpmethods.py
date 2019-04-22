@@ -357,7 +357,22 @@ def train_yolo_model(
     cliHandler(argv)
 
 
-def train_yolo_init(yolo_train_dir, yolo_result_dir, mstn_result_dir, picture_number, DO_NOT_DEL_TRAIN_PIC=True, train_yolo=False, first_train_yolo=False, filename="predict.py", model="cfg/yolo_test2.cfg", weights="bin/yolov2-tiny-voc.weights", annotation="train/annotation", dataset="train/image", learningrate="0.001", batchsize="8", epoch="100", save="200", pb='null', meta='null'):
+def train_yolo_init(
+        yolo_train_dir, 
+        yolo_result_dir, 
+        mstn_result_dir, 
+        DO_NOT_DEL_TRAIN_PIC=True, 
+        train_yolo=False, 
+        filename="predict.py", 
+        model="cfg/yolo_test2.cfg", 
+        weights="bin/yolov2-tiny-voc.weights", 
+        annotation="train/annotation", 
+        dataset="train/image", 
+        learningrate="0.001", 
+        batchsize="8", 
+        epoch="100", 
+        save="200"
+    ):
     """
     初始化训练文件夹，并按照指定选项训练yolo
     """
@@ -374,31 +389,17 @@ def train_yolo_init(yolo_train_dir, yolo_result_dir, mstn_result_dir, picture_nu
 
 
     if train_yolo:
-        if pb == 'null':
-            train_yolo_model(
-                filename=filename, 
-                model=model, 
-                weights=weights, 
-                annotation=annotation, 
-                dataset=dataset, 
-                learningrate=learningrate, 
-                batchsize=batchsize, 
-                epoch=epoch, 
-                save=save
-            )
-        
-        else:
-            train_yolo_model(
-                filename=filename, 
-                pb=pb,
-                meta=meta, 
-                annotation=annotation, 
-                dataset=dataset, 
-                learningrate=learningrate, 
-                batchsize=batchsize, 
-                epoch=epoch, 
-                save=save
-            )
+        train_yolo_model(
+            filename=filename, 
+            model=model,
+            weights=weights, 
+            annotation=annotation, 
+            dataset=dataset, 
+            learningrate=learningrate, 
+            batchsize=batchsize, 
+            epoch=epoch, 
+            save=save
+        )
 
 
 
@@ -436,13 +437,16 @@ def label_with_YOLO(
         meta="./YOLO_MODEL/built_graph/yolo_test2.meta",
         model='null',
         load='null',
-        use_gpu=False
+        use_gpu=False,
+        label_image=True
     ):
     """
     使用训练好的yolo模型分类测试图片为正、负、hard三类，并将测试结果box储存为新图片
     返回值：
         IoU：每张测试图片的IoU
     """
+    if not label_image:
+        return
 
     options = {
         "config": "./YOLO_MODEL/cfg/",
@@ -488,7 +492,10 @@ def label_feature_with_graph(feature):
             f.write("\n")
     
 
-def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, MSTN_train_img_dir, positive_score_limit=0.5):
+def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, MSTN_train_img_dir, positive_score_limit=0.5, background_modeling=True):
+    if not background_modeling:
+        return
+
     gt = autoback.ReadGT(
         GT_file=yolo_result_dir + "result.txt", 
         pic_num=pic_num_for_train_MSTN
@@ -721,14 +728,16 @@ def label_hard_pic_with_MSTN(
         mstn_train=False, 
         add_to_trainset=True, 
         step_log=True, 
-        result_log=True, 
         model_name='mstn', 
         train_epoch=400, 
-        SS_limit=0.2
+        SS_limit=0.2,
+        label_hard_image=True
     ):
     """
     使用MSTN模型训练分类hard样本，并将分类好的正样本加入yolo训练集中并分别制作标签
     """  
+    if not label_hard_image:
+        return
     
     with open(yolo_result_dir + "picture_numbers.txt", 'r') as f:
         number_list = f.readline().split(" ")
@@ -762,9 +771,9 @@ def label_hard_pic_with_MSTN(
             train_epoch=train_epoch
         )
 
-    if result_log == True:
-        log_array = np.column_stack([result_total, SS[0], SS[1]])
-        np.savetxt(mstn_result_dir + "result+score.txt", log_array)
+    
+    log_array = np.column_stack([result_total, SS[0], SS[1]])
+    np.savetxt(mstn_result_dir + "result+score.txt", log_array)
     
 
     high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
