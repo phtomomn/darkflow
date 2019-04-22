@@ -6,6 +6,8 @@ import os
 import json
 from ...cython_utils.cy_yolo_findboxes import yolo_box_constructor
 
+
+
 def _fix(obj, dims, scale, offs):
 	for i in range(1, 5):
 		dim = dims[(i + 1) % 2]
@@ -25,6 +27,8 @@ def process_box(self, b, h, w, threshold):
 	max_prob = b.probs[max_indx]
 	label = self.meta['labels'][max_indx]
 	if max_prob > threshold:
+		if b.w + b.h == float('inf'):
+			return None
 		left  = int ((b.x - b.w/2.) * w)
 		right = int ((b.x + b.w/2.) * w)
 		top   = int ((b.y - b.h/2.) * h)
@@ -70,6 +74,9 @@ def preprocess(self, im, allobj = None):
 			obj[3] = dims[0] - obj_1_
 		im = imcv2_recolor(im)
 
+	if type(im) is not np.ndarray and im == None:
+		h, w, c = self.meta['inp_size']
+		return np.zeros([h, w, c], dtype=np.float32)
 	im = self.resize_input(im)
 	if allobj is None: return im
 	return im#, np.array(im) # for unit testing

@@ -24,11 +24,11 @@ class argHandler(dict):
         self.define('savepb', False, 'save net and weight to a .pb file')
         self.define('gpu', 0.0, 'how much gpu (from 0.0 to 1.0)')
         self.define('gpuName', '/gpu:0', 'GPU device name')
-        self.define('lr', 1e-5, 'learning rate')
+        self.define('lr', 1e-5, 'learning rate')#1e-5
         self.define('keep',20,'Number of most recent training results to save')
-        self.define('batch', 16, 'batch size')
-        self.define('epoch', 1000, 'number of epoch')
-        self.define('save', 2000, 'save checkpoint every ? training examples')
+        self.define('batch', 16, 'batch size')#16
+        self.define('epoch', 1000, 'number of epoch')#1000
+        self.define('save', 2000, 'save checkpoint every ? training examples')#2000
         self.define('demo', '', 'demo on webcam')
         self.define('queue', 1, 'process demo in batch')
         self.define('json', False, 'Outputs bounding box information in json format.')

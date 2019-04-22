@@ -27,15 +27,18 @@ def cliHandler(args):
     
     if FLAGS.demo:
         tfnet.camera()
-        exit('Demo stopped, exit.')
+        print('Demo stopped, exit.')
+        return
 
     if FLAGS.train:
         print('Enter training ...'); tfnet.train()
         if not FLAGS.savepb: 
-            exit('Training finished, exit.')
+            print('Training finished, exit.')
+            return
 
     if FLAGS.savepb:
         print('Rebuild a constant version ...')
-        tfnet.savepb(); exit('Done')
+        tfnet.savepb(); print('Done')
+        return
 
     tfnet.predict()

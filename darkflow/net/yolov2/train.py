@@ -26,6 +26,7 @@ def loss(self, net_out):
     HW = H * W # number of grid cells
     anchors = m['anchors']
 
+    print('Using yolov2 loss.')
     print('{} loss hyper-parameters:'.format(m['model']))
     print('\tH       = {}'.format(H))
     print('\tW       = {}'.format(W))
@@ -103,5 +104,7 @@ def loss(self, net_out):
     loss = tf.multiply(loss, wght)
     loss = tf.reshape(loss, [-1, H*W*B*(4 + 1 + C)])
     loss = tf.reduce_sum(loss, 1)
+    self.loss_batch = loss
+    loss = tf.cond(tf.reduce_max(loss)>800, lambda:800.0*tf.ones_like(loss), lambda:loss)
     self.loss = .5 * tf.reduce_mean(loss)
     tf.summary.scalar('{} loss'.format(m['model']), self.loss)

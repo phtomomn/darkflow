@@ -35,6 +35,7 @@ def train(self):
 
     batches = self.framework.shuffle()
     loss_op = self.framework.loss
+    loss_batch_op = self.framework.loss_batch
 
     for i, (x_batch, datum) in enumerate(batches):
         if not i: self.say(train_stats.format(
@@ -48,13 +49,16 @@ def train(self):
         feed_dict[self.inp] = x_batch
         feed_dict.update(self.feed)
 
-        fetches = [self.train_op, loss_op]
+        fetches = [self.train_op, loss_op, loss_batch_op]
 
         if self.FLAGS.summary:
             fetches.append(self.summary_op)
 
         fetched = self.sess.run(fetches, feed_dict)
         loss = fetched[1]
+        loss_batch = fetched[2]
+        if np.isnan(loss):
+            print('!!!')
 
         if loss_mva is None: loss_mva = loss
         loss_mva = .9 * loss_mva + .1 * loss
@@ -63,8 +67,8 @@ def train(self):
         if self.FLAGS.summary:
             self.writer.add_summary(fetched[2], step_now)
 
-        form = 'step {} - loss {} - moving ave loss {}'
-        self.say(form.format(step_now, loss, loss_mva))
+        form = 'step {} - loss {} - moving ave loss {} - batch loss {}'
+        self.say(form.format(step_now, loss, loss_mva, loss_batch))
         profile += [(loss, loss_mva)]
 
         ckpt = (i+1) % (self.FLAGS.save // self.FLAGS.batch)
