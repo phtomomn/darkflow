@@ -2,13 +2,16 @@
 # Python bytecode
 *.pyc
 
-# Weight files
-bin/
+# YOLO files
+YOLO_MODEL/
 
-# Sample image data
-sample_img/*.jpg
-!sample_img/sample_*.jpg
-sample_img/out/*
+# MSTN files
+MSTN_MODEL/MSTN_models/training
+MSTN_MODEL/MSTN_models/*.npy
+MSTN_MODEL/MSTN_result
+MSTN_MODEL/MSTN_train_images
+MSTN_MODEL/MSTN_train_log
+MSTN_MODEL/trained_models
 
 # Annotated test results
 results/
@@ -44,3 +47,4 @@ ckpt/*
 
 #pytest cache
 .cache/
+*.npy
