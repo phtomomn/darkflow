@@ -15,66 +15,15 @@ from darkflow.cli import cliHandler
 from darkflow.net.build import TFNet
 from MSTN_MODEL.MSTN_train import mstn_label_with_model, mstn_trainmodel
 from MSTN_MODEL.MSTN_train import mstn_label_with_model_noTL, mstn_trainmodel_noTL
-#from YOLO_MODEL.yolo_train.label import make_label
 
 
-def ReadGroundTruth(GTfilename, picnum=1):
-    """
-    读取GT文件
-    返回值：
-        GT：
-            2维list
-            第一维为图片引索
-            第二维为与原图像同尺寸的box分布（有box为1，否则为0）
-        GT_list：
-            2维list
-            第一维为图片引索
-            第二维为的box位置
-    """
-    GT = np.zeros((picnum, 1920, 1080))
-    GT_list = []
-    for _ in range(picnum):
-        GT_list.append([])
-
-    with open(GTfilename) as f:
-        while True:
-            line = f.readline()
-            line_list = line.split(",")
-
-            pic = int(line_list[1])
-            if pic == picnum:
-                break
-
-            lefttop_x = min(int(float(line_list[8])), 1920)
-            lefttop_y = min(int(float(line_list[9])), 1080)
-            rightbuttom_x = min(int(float(line_list[10])), 1920)
-            rightbuttom_y = min(int(float(line_list[11])), 1080)
-
-            GT[pic, lefttop_x:rightbuttom_x, lefttop_y:rightbuttom_y] = 1
-            GT_list[pic].append(
-                [lefttop_x, lefttop_y, rightbuttom_x, rightbuttom_y])
-
-            #print(lefttop_x,lefttop_y, rightbuttom_x, rightbuttom_y)
-
-    return GT, GT_list
-
-
-def get_background_picture(GT, yolo_train_dir, train_picture_index=0):
-    img = cv2.imread(yolo_train_dir + "image/" +str(train_picture_index).zfill(6) + ".jpg")
-    current_GT_T = (np.array(GT[train_picture_index])).T
-
-    temp_img = np.zeros_like(img)
-
-    for i in range(current_GT_T.shape[0]):
-        for j in range(current_GT_T.shape[1]):
-            if current_GT_T[i][j]:
-                temp_img[i][j] = (current_GT_T[i][j], current_GT_T[i][j], current_GT_T[i][j])
-
-    img = np.multiply(img,1-temp_img)
-    cv2.imwrite(yolo_train_dir + "background.jpg", img)
-
-
-def test_model(yolomodel, yolo_test_dir, picture_number, confidence_limit=0.5, start_number=0):
+def test_with_yolo(
+        yolomodel, 
+        yolo_test_dir, 
+        picture_number, 
+        confidence_limit=0.5, 
+        start_number=0
+    ):
     """
     使用yolo模型测试指定数量的图片
     图片名称要求：0填充6位
@@ -86,24 +35,19 @@ def test_model(yolomodel, yolo_test_dir, picture_number, confidence_limit=0.5, s
             第一维为图片引索
             第二维为的box位置与置信度
     """
-    predict_box = np.zeros((start_number + picture_number, 1920, 1080))
+    predict_box = 0 # useless
     predict_box_list = []
     file_name_list = []
-    result_list = []
     result_txt = []
 
     for _ in range(start_number + picture_number):
         predict_box_list.append([])
     
     for i in range(start_number, start_number + picture_number):
-        imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
-        result = yolomodel.return_predict(imgcv)
-        result_list.append(result)
         print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)))
-    
-    print("{} YOLO detect done. Start processing detection result.".format(datetime.datetime.now()))
-    for i in range(start_number, start_number + picture_number):
-        result = result_list[i]
+        imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
+        img_shape = imgcv.shape[0:2]
+        result = yolomodel.return_predict(imgcv)
         box_number = len(result)
         for j in range(box_number):
             current_box = result[j]
@@ -112,24 +56,27 @@ def test_model(yolomodel, yolo_test_dir, picture_number, confidence_limit=0.5, s
                 bottomright = current_box['bottomright']
                 confidence = current_box['confidence']
 
-                if bottomright['x'] - topleft['x'] >= 150 or bottomright['y'] - topleft['y'] >= 150:
+                if bottomright['x'] - topleft['x'] >= 0.4*img_shape[1] or bottomright['y'] - topleft['y'] >= 0.4*img_shape[0]:
                     continue
 
                 result_txt.append([j, i, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
 
                 if confidence >= confidence_limit:
-                    predict_box[i, topleft['x']:bottomright['x'],
-                                topleft['y']:bottomright['y']] = 1
-
-                predict_box_list[i].append(
-                    [topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
-                file_name_list.append(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
+                    predict_box_list[i].append([topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
+                    file_name_list.append(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
 
     np.savetxt(yolo_test_dir+'result.txt', np.array(result_txt))
     return predict_box, predict_box_list, file_name_list
 
 
-def save_predict_picture_with_box(yolo_test_dir, yolo_predict_whole_pic_dir, picture_number, predict_box_list, confidence_limit=0.5, start_number=0):
+def save_predict_picture_with_box(
+        yolo_test_dir, 
+        yolo_predict_whole_pic_dir, 
+        picture_number, 
+        predict_box_list, 
+        confidence_limit=0.5, 
+        start_number=0
+    ):
     """
     根据yolo预测结果在原图上加box，并保存
     """
@@ -162,12 +109,23 @@ def save_predict_picture_with_box(yolo_test_dir, yolo_predict_whole_pic_dir, pic
                     current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
 
         cv2.imwrite(yolo_predict_whole_pic_dir + str(i).zfill(6) + ".jpg", img)
+        print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)))
 
     print("{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
 
 
 
-def save_class_predict_box_sub_picture(yolo_test_dir, yolo_result_dir, predict_box_list, file_name_list, picture_number, start_number = 0, low_limit=0.1, high_limit=0.5, save=True):
+def save_class_predict_box_sub_picture(
+        yolo_test_dir, 
+        yolo_result_dir, 
+        predict_box_list, 
+        file_name_list, 
+        picture_number, 
+        start_number = 0, 
+        low_limit=0.1, 
+        high_limit=0.5, 
+        save=True
+    ):
     """
     根据yolo预测结果与两个阈值，取出hard样本对应box，并另存为新图片。
     并将预测结果中的图片数量写入picture_numbers.txt，同时保存适合于mstn模型训练的标签picture_labels.txt
@@ -209,6 +167,7 @@ def save_class_predict_box_sub_picture(yolo_test_dir, yolo_result_dir, predict_b
 
         with Image.open(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg") as img:
             for j in range(box_number):
+                print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(start_number-i+1), str(picture_number)))
                 current_box_and_confidence = current_predict[j]
                 current_box = current_box_and_confidence[0:4]
                 confidence = current_box_and_confidence[4]
@@ -438,7 +397,8 @@ def label_with_YOLO(
         model='null',
         load='null',
         use_gpu=False,
-        label_image=True
+        label_image=True,
+        yolo_limit=0.08
     ):
     """
     使用训练好的yolo模型分类测试图片为正、负、hard三类，并将测试结果box储存为新图片
@@ -450,7 +410,7 @@ def label_with_YOLO(
 
     options = {
         "config": "./YOLO_MODEL/cfg/",
-        "threshold": 0.08
+        "threshold": yolo_limit
     }
 
     if model == 'null':
@@ -458,38 +418,45 @@ def label_with_YOLO(
     else:
         options.update({"model": model, "load": load})
 
-    if use_gpu:
-        options.update({"gpu":1.0})
+    if use_gpu > 0:
+        options.update({"gpu":use_gpu})
 
     tfnet = TFNet(options)
+    predict_box, predict_box_list, file_name_list = test_with_yolo(
+        tfnet, 
+        yolo_test_dir, 
+        picture_number, 
+        start_number=start_number, 
+        confidence_limit=confidence_limit_low
+    )
 
-    #GT = make_label(yolo_test_dir, picture_number, state="test", start_number=start_number)
+    save_class_predict_box_sub_picture(
+        yolo_test_dir, 
+        yolo_result_dir, 
+        predict_box_list, 
+        file_name_list, 
+        picture_number, 
+        start_number = start_number,
+        low_limit=confidence_limit_low, 
+        high_limit=confidence_limit_high
+    )
 
-    predict_box, predict_box_list, file_name_list = test_model(
-        tfnet, yolo_test_dir, picture_number, start_number=start_number, confidence_limit=confidence_limit_low)
-
-    save_class_predict_box_sub_picture(yolo_test_dir, yolo_result_dir, predict_box_list, file_name_list, picture_number, start_number = start_number,
-                                       low_limit=confidence_limit_low, high_limit=confidence_limit_high)
-
-    #IoU = predict_IoU(GT, predict_box, picture_number, start_number=start_number)
-
-    save_yolo_predict_result(predict_box_list, yolo_result_dir, low_limit=confidence_limit_low, high_limit=confidence_limit_high)
+    save_yolo_predict_result(
+        predict_box_list, 
+        yolo_result_dir, 
+        low_limit=confidence_limit_low, 
+        high_limit=confidence_limit_high
+    )
 
     if save_picture_with_box:
         save_predict_picture_with_box(
-            yolo_test_dir, yolo_result_dir + "whole_pic/", picture_number, predict_box_list, start_number=start_number, confidence_limit=confidence_limit_low)
-
-
-    #return IoU
-
-
-def label_feature_with_graph(feature):
-    with open("./feature.txt", "w") as f:
-        for i in range(len(feature)):
-            for j in range(len(feature[i][0])):
-                f.write(str(feature[i][0][j]))
-                f.write(" ")
-            f.write("\n")
+            yolo_test_dir, 
+            yolo_result_dir + "whole_pic/", 
+            picture_number, 
+            predict_box_list, 
+            start_number=start_number, 
+            confidence_limit=confidence_limit_high
+        )
     
 
 def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, MSTN_train_img_dir, positive_score_limit=0.5, background_modeling=True):
@@ -666,6 +633,11 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     xml_save_dir = yolo_train_dir + "annotation/"
     train_picture_dir = yolo_train_dir + "image/"
+
+    if not os.path.exists(xml_save_dir):
+        os.makedirs(xml_save_dir)
+    if not os.path.exists(train_picture_dir):
+        os.makedirs(train_picture_dir)
 
     box_count = 0
     for pic in range(0, np.max(final_position.T[1]).astype(np.int32)+1):
