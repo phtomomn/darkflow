@@ -44,11 +44,12 @@ def test_with_yolo(
         predict_box_list.append([])
     
     for i in range(start_number, start_number + picture_number):
-        print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)))
+        print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='')
         imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
         img_shape = imgcv.shape[0:2]
         result = yolomodel.return_predict(imgcv)
         box_number = len(result)
+        print('\tDone. {} boxex found.'.format(str(box_number)))
         for j in range(box_number):
             current_box = result[j]
             if current_box['label'] == 'person':
@@ -102,7 +103,7 @@ def save_predict_picture_with_box(
                     current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
             else:
                 cv2.rectangle(
-                    img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 0, 0), 5)
+                    img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 5)
                 cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                     current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (128, 128, 128), 5)
                 cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
@@ -769,15 +770,18 @@ def label_hard_pic_with_MSTN_noTL(
         mstn_train=False, 
         add_to_trainset=True, 
         step_log=True, 
-        result_log=True, 
         model_name='mstn', 
         train_epoch=400, 
-        SS_limit=0.2
+        SS_limit=0.2,
+        label_hard_image=True
     ):
     """
     使用MSTN模型训练分类hard样本，并将分类好的正样本加入yolo训练集中并分别制作标签
     **不使用目标域有标签样本，仅供测试使用！**
     """  
+    if not label_hard_image:
+        return
+    
     with open(yolo_result_dir + "picture_numbers.txt", 'r') as f:
         number_list = f.readline().split(" ")
         neg_box_number = int(number_list[0])
@@ -786,6 +790,7 @@ def label_hard_pic_with_MSTN_noTL(
 
     training_img_number = min(hard_box_number, 200)
     val_img_number = hard_box_number
+    
     
     if mstn_train == True:
         last_model_path, result_total, SS = mstn_trainmodel_noTL(
@@ -805,19 +810,19 @@ def label_hard_pic_with_MSTN_noTL(
         model_name=model_name
     )
 
-    if result_log == True:
-        log_array = np.column_stack([result_total, SS[0], SS[1]])
-        np.savetxt(mstn_result_dir + "result+score.txt", log_array)
+    
+    #log_array = np.column_stack([result_total, SS[0], SS[1]])
+    #np.savetxt(mstn_result_dir + "result+score.txt", log_array)
     
 
-    high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
-    np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
+    #high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
+    #np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
 
     print("Hard samples are classified.")
 
-    if add_to_trainset:
-        make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir)
-        print("Classified hard samples and their labels are add to yolo train set.")
+    #if add_to_trainset:
+    #    make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir)
+    #    print("Classified hard samples and their labels are add to yolo train set.")
 
 
 

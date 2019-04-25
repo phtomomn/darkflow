@@ -17,8 +17,8 @@ def main():
     mstn_target_train_label = "./MSTN_MODEL/MSTN_train_images/target_with_label.txt"
     mstn_target_test_file = yolo_result_dir + "picture_labels.txt"
 
-    train_yolo_picture_number = 871
-    test_yolo_picture_number = 871
+    train_yolo_picture_number = 100
+    test_yolo_picture_number = 100
     test_pictuce_start_number = 0
 
     clow = 0.08
@@ -53,16 +53,16 @@ def main():
         use_gpu=False,                                       # 选择是否使用gpu加速检测
         start_number=test_pictuce_start_number,             # 待检测图片的起始编号（文件名需要0填充共6位）
         save_picture_with_box=True,                         # 选择是否保存检测结果的完整图片到yolo_result_dir
-        label_image=False                            # 选择是否运行此函数
+        label_image=True                            # 选择是否运行此函数
     )
 
     MSTN_train_set_init(
         yolo_result_dir=yolo_result_dir,
         yolo_test_dir=yolo_test_dir,
         MSTN_train_img_dir=mstn_train_img_dir,
-        pic_num_for_train_MSTN=871,                 # 背景建模使用的视频帧数量
-        positive_score_limit=0.2,                   # 背景建模中的检测结果得分阈值
-        background_modeling=True                    # 选择是否运行此函数
+        pic_num_for_train_MSTN=test_yolo_picture_number,    # 背景建模使用的视频帧数量
+        positive_score_limit=0.2,                           # 背景建模中的检测结果得分阈值
+        background_modeling=True                           # 选择是否运行此函数
     )
 
     label_hard_pic_with_MSTN(
@@ -76,9 +76,9 @@ def main():
         SS_limit=0.3,
         mstn_train=False,               # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
         step_log=True,                  # 选择是否计算每20步训练的结果
-        add_to_trainset=True,           # 选择是否将分类结果制作为yolo训练图片
-        model_name="lot2-871",        # 训练/使用的模型名称
-        train_epoch=500,                # 训练迭代次数（四个数据集均在500左右较为合适）
+        add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
+        model_name="towncenter1000",              # 训练/使用的模型名称
+        train_epoch=500,                  # 训练迭代次数（四个数据集均在500左右较为合适）
         label_hard_image=True           # 选择是否运行此函数
     )
 
