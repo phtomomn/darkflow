@@ -19,7 +19,8 @@ from MSTN_MODEL.MSTN_train import mstn_label_with_model_noTL, mstn_trainmodel_no
 
 def test_with_yolo(
         yolomodel, 
-        yolo_test_dir, 
+        yolo_test_dir,
+        yolo_result_dir, 
         picture_number, 
         confidence_limit=0.5, 
         start_number=0
@@ -27,7 +28,7 @@ def test_with_yolo(
     """
     使用yolo模型测试指定数量的图片
     图片名称要求：0填充6位
-    返回值：
+    结果保存：
         predict_box：
             第一维：图片引索
             第二维：与原图同尺寸的box分布
@@ -35,21 +36,15 @@ def test_with_yolo(
             第一维为图片引索
             第二维为的box位置与置信度
     """
-    predict_box = 0 # useless
-    predict_box_list = []
-    file_name_list = []
-    result_txt = []
-
-    for _ in range(start_number + picture_number):
-        predict_box_list.append([])
+    predict_result = []
     
     for i in range(start_number, start_number + picture_number):
-        print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='')
+        print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)))
         imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
         img_shape = imgcv.shape[0:2]
         result = yolomodel.return_predict(imgcv)
+        person_cnt = 0
         box_number = len(result)
-        print('\tDone. {} boxex found.'.format(str(box_number)))
         for j in range(box_number):
             current_box = result[j]
             if current_box['label'] == 'person':
@@ -59,24 +54,25 @@ def test_with_yolo(
 
                 if bottomright['x'] - topleft['x'] >= 0.4*img_shape[1] or bottomright['y'] - topleft['y'] >= 0.4*img_shape[0]:
                     continue
-
-                result_txt.append([j, i, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
-
+                
                 if confidence >= confidence_limit:
-                    predict_box_list[i].append([topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
-                    file_name_list.append(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
+                    predict_result.append([i, j, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
+                    person_cnt += 1
+        
+        print('\tDone. {} boxes found.'.format(str(person_cnt)))
 
-    np.savetxt(yolo_test_dir+'result.txt', np.array(result_txt))
-    return predict_box, predict_box_list, file_name_list
+    np.savetxt(yolo_result_dir+'predict_result.txt', np.array(predict_result))
+
 
 
 def save_predict_picture_with_box(
-        yolo_test_dir, 
+        img_dir,
+        result_file, 
         yolo_predict_whole_pic_dir, 
-        picture_number, 
-        predict_box_list, 
+        picture_number,  
         confidence_limit=0.5, 
-        start_number=0
+        start_number=0,
+        show_confidence=True
     ):
     """
     根据yolo预测结果在原图上加box，并保存
@@ -84,30 +80,36 @@ def save_predict_picture_with_box(
     if not os.path.exists(yolo_predict_whole_pic_dir):
         os.makedirs(yolo_predict_whole_pic_dir)
 
-    for i in range(start_number, start_number + picture_number):
-        current_predict = predict_box_list[i]
-        box_number = len(current_predict)
+    predict_result = np.loadtxt(result_file)
 
-        img = cv2.imread(yolo_test_dir + "image/" +str(i).zfill(6) + ".jpg")
+    for i in range(start_number, start_number + picture_number):
+        current_predict = predict_result[np.where(predict_result.T[0]==i)]
+        box_number = current_predict.shape[0]
+
+        img = cv2.imread(img_dir +str(i).zfill(6) + ".jpg")
         for j in range(box_number):
             current_box_and_confidence = current_predict[j]
-            current_box = current_box_and_confidence[0:4]
-            confidence = current_box_and_confidence[4]
+            current_box = current_box_and_confidence[2:6].astype(np.int32)
 
-            if confidence >= confidence_limit:
-                cv2.rectangle(
-                    img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
-                cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
-                    current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
-                cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
-                    current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+            if show_confidence:
+                confidence = current_box_and_confidence[6]
+                if confidence >= confidence_limit:
+                    cv2.rectangle(
+                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+                else:
+                    cv2.rectangle(
+                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 5)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (128, 128, 128), 5)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+            
             else:
-                cv2.rectangle(
-                    img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 5)
-                cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
-                    current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (128, 128, 128), 5)
-                cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
-                    current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+                cv2.rectangle(img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
 
         cv2.imwrite(yolo_predict_whole_pic_dir + str(i).zfill(6) + ".jpg", img)
         print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)))
@@ -119,8 +121,6 @@ def save_predict_picture_with_box(
 def save_class_predict_box_sub_picture(
         yolo_test_dir, 
         yolo_result_dir, 
-        predict_box_list, 
-        file_name_list, 
         picture_number, 
         start_number = 0, 
         low_limit=0.1, 
@@ -162,16 +162,17 @@ def save_class_predict_box_sub_picture(
     for _ in range(start_number + picture_number):
         predict_box_hard_list.append([])
 
+    predict_result = np.loadtxt(yolo_result_dir+'predict_result.txt')
     for i in range(start_number, start_number + picture_number):
-        current_predict = predict_box_list[i]
-        box_number = len(current_predict)
+        current_predict = predict_result[np.where(predict_result.T[0]==i)]
+        box_number = current_predict.shape[0]
 
         with Image.open(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg") as img:
             for j in range(box_number):
                 print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(start_number-i+1), str(picture_number)))
                 current_box_and_confidence = current_predict[j]
-                current_box = current_box_and_confidence[0:4]
-                confidence = current_box_and_confidence[4]
+                current_box = current_box_and_confidence[2:6]
+                confidence = current_box_and_confidence[6]
 
                 if current_box[0] == current_box[2] or current_box[1] == current_box[3]:
                     continue
@@ -363,22 +364,28 @@ def train_yolo_init(
 
 
 
-def save_yolo_predict_result(predict_box_list, yolo_result_dir, low_limit=0.1, high_limit=0.5):
+def save_yolo_predict_result(yolo_result_dir, low_limit=0.1, high_limit=0.5):
     predict_box_array = []
     predict_box_array_pos = []
     predict_box_array_hard = []
-    predict_pic_num = len(predict_box_list)
+
+    predict_result = np.loadtxt(yolo_result_dir+'predict_result.txt')
+    predict_pic_num = (np.max(predict_result.T[0]) - np.min(predict_result.T[0]) + 1).astype(np.int32)
 
     for pic in range(predict_pic_num):
-        box_number = len(predict_box_list[pic])
+        current_predict = predict_result[np.where(predict_result.T[0]==pic)]
+        box_number = current_predict.shape[0]
+
+        if box_number == 0:
+            continue
 
         for box in range(box_number):
-            predict_box_array.append([box, pic, predict_box_list[pic][box][0], predict_box_list[pic][box][1], predict_box_list[pic][box][2], predict_box_list[pic][box][3], predict_box_list[pic][box][4]])
-            if predict_box_list[pic][box][4] >= low_limit and predict_box_list[pic][box][4] <= high_limit:
-                predict_box_array_hard.append([box, pic, predict_box_list[pic][box][0], predict_box_list[pic][box][1], predict_box_list[pic][box][2], predict_box_list[pic][box][3], predict_box_list[pic][box][4]])
+            predict_box_array.append([box, pic, current_predict[box][2], current_predict[box][3], current_predict[box][4], current_predict[box][5], current_predict[box][6]])
+            if current_predict[box][6] >= low_limit and current_predict[box][6] <= high_limit:
+                predict_box_array_hard.append([box, pic, current_predict[box][2], current_predict[box][3], current_predict[box][4], current_predict[box][5], current_predict[box][6]])
             
-            if predict_box_list[pic][box][4] >= high_limit:
-                predict_box_array_pos.append([box, pic, predict_box_list[pic][box][0], predict_box_list[pic][box][1], predict_box_list[pic][box][2], predict_box_list[pic][box][3], predict_box_list[pic][box][4]])
+            if current_predict[box][6] >= high_limit:
+                predict_box_array_pos.append([box, pic, current_predict[box][2], current_predict[box][3], current_predict[box][4], current_predict[box][5], current_predict[box][6]])
             
     np.savetxt(yolo_result_dir + "result.txt", np.array(predict_box_array))
     np.savetxt(yolo_result_dir + "position_hard.txt", np.array(predict_box_array_hard))
@@ -399,7 +406,8 @@ def label_with_YOLO(
         load='null',
         use_gpu=False,
         label_image=True,
-        yolo_limit=0.08
+        yolo_limit=0.08,
+        already_labeled=False
     ):
     """
     使用训练好的yolo模型分类测试图片为正、负、hard三类，并将测试结果box储存为新图片
@@ -409,33 +417,33 @@ def label_with_YOLO(
     if not label_image:
         return
 
-    options = {
-        "config": "./YOLO_MODEL/cfg/",
-        "threshold": yolo_limit
-    }
+    if already_labeled == False:
+        options = {
+            "config": "./YOLO_MODEL/cfg/",
+            "threshold": yolo_limit
+        }
 
-    if model == 'null':
-        options.update({"pbLoad": pb, "metaLoad": meta})
-    else:
-        options.update({"model": model, "load": load})
+        if model == 'null':
+            options.update({"pbLoad": pb, "metaLoad": meta})
+        else:
+            options.update({"model": model, "load": load})
 
-    if use_gpu > 0:
-        options.update({"gpu":use_gpu})
+        if use_gpu > 0:
+            options.update({"gpu":use_gpu})
 
-    tfnet = TFNet(options)
-    predict_box, predict_box_list, file_name_list = test_with_yolo(
-        tfnet, 
-        yolo_test_dir, 
-        picture_number, 
-        start_number=start_number, 
-        confidence_limit=confidence_limit_low
-    )
+        tfnet = TFNet(options)
+        test_with_yolo(
+            tfnet, 
+            yolo_test_dir, 
+            yolo_result_dir,
+            picture_number, 
+            start_number=start_number, 
+            confidence_limit=confidence_limit_low
+        )
 
     save_class_predict_box_sub_picture(
         yolo_test_dir, 
         yolo_result_dir, 
-        predict_box_list, 
-        file_name_list, 
         picture_number, 
         start_number = start_number,
         low_limit=confidence_limit_low, 
@@ -443,7 +451,6 @@ def label_with_YOLO(
     )
 
     save_yolo_predict_result(
-        predict_box_list, 
         yolo_result_dir, 
         low_limit=confidence_limit_low, 
         high_limit=confidence_limit_high
@@ -451,10 +458,10 @@ def label_with_YOLO(
 
     if save_picture_with_box:
         save_predict_picture_with_box(
-            yolo_test_dir, 
+            yolo_test_dir + "image/",
+            yolo_result_dir + 'predict_result.txt', 
             yolo_result_dir + "whole_pic/", 
             picture_number, 
-            predict_box_list, 
             start_number=start_number, 
             confidence_limit=confidence_limit_high
         )
@@ -618,6 +625,17 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     hard_result_classify = np.loadtxt(mstn_result_dir + "result+score.txt")
     hard_result_position = np.loadtxt(yolo_result_dir + "position_hard.txt")
+    hard_result_position_final = np.column_stack(
+        [
+            hard_result_position.T[0], 
+            hard_result_position.T[1], 
+            hard_result_position.T[2], 
+            hard_result_position.T[3], 
+            hard_result_position.T[4], 
+            hard_result_position.T[5],
+            hard_result_classify.T[1]+hard_result_classify.T[2],
+        ]
+    )
     pos_result_position = np.loadtxt(yolo_result_dir + "position_pos.txt") 
     
     
@@ -629,8 +647,8 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     high_score_image_flage = np.loadtxt(mstn_result_dir + "high_score_index.txt")
 
-    final_position, final_path = hard_and_pos_processing(hard_result_classify, hard_result_position, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
-    
+    final_position, final_path = hard_and_pos_processing(hard_result_classify, hard_result_position_final, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
+    np.savetxt(yolo_train_dir + 'labels.txt', np.column_stack([final_position.T[1], final_position.T[0], final_position.T[2], final_position.T[3], final_position.T[4], final_position.T[5], final_position.T[6]]))
 
     xml_save_dir = yolo_train_dir + "annotation/"
     train_picture_dir = yolo_train_dir + "image/"
@@ -680,25 +698,20 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
             xml_path=xml_save_dir + current_xml_name
         )
         
-    
-
-
-    #with open(yolo_train_dir + "picture_number.txt", 'w') as f:
-    #    f.write(str(picture_number + xml_start_count))
+    return final_position
 
 
 
 
 
 def label_hard_pic_with_MSTN(
-        yolo_result_dir, 
-        mstn_train_img_dir,
-        mstn_result_dir, 
-        yolo_train_dir, 
+        yolo_dir,
+        mstn_dir,
         mstn_source_train_label, 
         mstn_target_test_file, 
         mstn_target_train_label, 
         mstn_train=False, 
+        mstn_test=False,
         add_to_trainset=True, 
         step_log=True, 
         model_name='mstn', 
@@ -706,6 +719,14 @@ def label_hard_pic_with_MSTN(
         SS_limit=0.2,
         label_hard_image=True
     ):
+    yolo_train_dir = yolo_dir + 'yolo_train/'
+    yolo_test_dir = yolo_dir + 'yolo_test/'
+    yolo_result_dir = yolo_dir + 'yolo_result/'
+
+    mstn_train_img_dir = mstn_dir + 'MSTN_train_images/'
+    mstn_result_dir = mstn_dir + 'MSTN_result/'
+
+
     """
     使用MSTN模型训练分类hard样本，并将分类好的正样本加入yolo训练集中并分别制作标签
     """  
@@ -733,7 +754,7 @@ def label_hard_pic_with_MSTN(
         )
         return
 
-    else:
+    elif mstn_test == True:
         result_total, SS = mstn_label_with_model(
             TRAINING_FILE=mstn_source_train_label, 
             VAL_FILE=mstn_target_test_file, 
@@ -745,17 +766,26 @@ def label_hard_pic_with_MSTN(
         )
 
     
-    log_array = np.column_stack([result_total, SS[0], SS[1]])
-    np.savetxt(mstn_result_dir + "result+score.txt", log_array)
-    
+        log_array = np.column_stack([result_total, SS[0], SS[1]])
+        np.savetxt(mstn_result_dir + "result+score.txt", log_array)
+        
 
-    high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
-    np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
+        high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
+        np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
 
-    print("Hard samples are classified.")
+        print("Hard samples are classified.")
     
     if add_to_trainset:
-        make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir)
+        final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir)
+        picture_number = (np.max(final_position.T[1]) - np.min(final_position.T[1]) + 1).astype(np.int32)
+        save_predict_picture_with_box(
+            yolo_train_dir + 'image/',
+            yolo_train_dir + 'labels.txt',
+            yolo_train_dir + 'image_with_box/',
+            picture_number=picture_number,
+            start_number=np.min(final_position.T[0]).astype(np.int32),
+            confidence_limit=0
+        )
         print("Classified hard samples and their labels are add to yolo train set.")
 
 
