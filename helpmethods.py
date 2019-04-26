@@ -505,8 +505,7 @@ def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, 
     )
 
 
-def MSTN_result_process(mstn_predict_result, result_score, score_weight=[1.0, 1.0], score_threshold=0.4):
-    [score_source, score_target] = result_score
+def MSTN_result_process(mstn_predict_result, score_source, score_target, score_weight=[1.0, 1.0], score_threshold=0.4):
     final_source = score_source * score_weight[0] + score_target * score_weight[1]
     high_score_image_flage = final_source >= score_threshold
     return high_score_image_flage
@@ -600,9 +599,13 @@ def hard_and_pos_processing(hard_result_classify, hard_result_position, hard_res
     for i in range(final_index.shape[0]):
         hard_result_path_f.append(hard_result_path[final_index[i]])
 
-
-    result_position = np.concatenate([hard_result_position_f, pos_result_position], axis=0)
-    result_path = hard_result_path_f + pos_result_path
+    if pos_result_position.shape[0]:
+        result_position = np.concatenate([hard_result_position_f, pos_result_position], axis=0)
+        result_path = hard_result_path_f + pos_result_path
+    
+    else:
+        result_position = hard_result_position_f
+        result_path = hard_result_path_f
 
     img_cnt = result_position.T[1]
     img_order_sort_index = np.argsort(img_cnt)
@@ -618,7 +621,7 @@ def hard_and_pos_processing(hard_result_classify, hard_result_position, hard_res
 
 
 
-def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir):
+def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight):
     """
     将从mstn网络输出的hard样本中得到的正样本加入yolo训练集，同时制作yolo训练使用的标签
     """
@@ -648,7 +651,17 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
     high_score_image_flage = np.loadtxt(mstn_result_dir + "high_score_index.txt")
 
     final_position, final_path = hard_and_pos_processing(hard_result_classify, hard_result_position_final, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
-    np.savetxt(yolo_train_dir + 'labels.txt', np.column_stack([final_position.T[1], final_position.T[0], final_position.T[2], final_position.T[3], final_position.T[4], final_position.T[5], final_position.T[6]]))
+    np.savetxt(yolo_train_dir + 'labels.txt', np.column_stack(
+        [
+            hard_result_position.T[1], 
+            hard_result_position.T[0], 
+            hard_result_position.T[2], 
+            hard_result_position.T[3], 
+            hard_result_position.T[4], 
+            hard_result_position.T[5],
+            hard_result_classify.T[1]*score_weight[0]+hard_result_classify.T[2]*score_weight[1],
+        ]
+    ))
 
     xml_save_dir = yolo_train_dir + "annotation/"
     train_picture_dir = yolo_train_dir + "image/"
@@ -660,6 +673,7 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     box_count = 0
     for pic in range(0, np.max(final_position.T[1]).astype(np.int32)+1):
+        print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)))
         current_pic_index = np.where(final_position.T[1] == pic)[0]
 
         if current_pic_index.shape[0] == 0:
@@ -701,10 +715,15 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
     return final_position
 
 
-
+def caculate_theta(theta0, beta, nu, result, original_score):
+    zeta = np.sum(original_score * np.sign(result-0.5)) / np.sum(np.abs(original_score - beta))
+    theta = 1 - nu * zeta
+    return theta
 
 
 def label_hard_pic_with_MSTN(
+        theta,
+        beta,
         yolo_dir,
         mstn_dir,
         mstn_source_train_label, 
@@ -765,26 +784,31 @@ def label_hard_pic_with_MSTN(
             train_epoch=train_epoch
         )
 
-    
-        log_array = np.column_stack([result_total, SS[0], SS[1]])
+        original_hard_score = np.loadtxt(yolo_result_dir+'position_hard.txt')
+        log_array = np.column_stack([result_total, SS[0], SS[1], original_hard_score.T[6]])
         np.savetxt(mstn_result_dir + "result+score.txt", log_array)
-        
 
-        high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
-        np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
+
+        
 
         print("Hard samples are classified.")
     
     if add_to_trainset:
-        final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir)
+        res = np.loadtxt(mstn_result_dir + "result+score.txt")
+        high_score_image_flage = MSTN_result_process(res.T[0], res.T[1], res.T[2], score_weight=[1.0, 3.0], score_threshold=0.7)
+        np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
+        theta_new = caculate_theta(theta, beta, nu=0.85, result=res.T[0], original_score=res.T[3])
+        print(theta_new)
+
+        final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight=[1.0, 3.0])
         picture_number = (np.max(final_position.T[1]) - np.min(final_position.T[1]) + 1).astype(np.int32)
         save_predict_picture_with_box(
-            yolo_train_dir + 'image/',
+            yolo_test_dir + 'image/',
             yolo_train_dir + 'labels.txt',
             yolo_train_dir + 'image_with_box/',
             picture_number=picture_number,
             start_number=np.min(final_position.T[0]).astype(np.int32),
-            confidence_limit=0
+            confidence_limit=0.6
         )
         print("Classified hard samples and their labels are add to yolo train set.")
 
