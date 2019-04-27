@@ -129,8 +129,9 @@ def shuffle(self):
                         old_feed, [new] 
                     ])      
             
-            x_batch = np.concatenate(x_batch, 0)
-            yield x_batch, feed_batch
+            if not len(x_batch) == 0:
+                x_batch = np.concatenate(x_batch, 0)
+                yield x_batch, feed_batch
         
         print('Finish {} epoch(es)'.format(i + 1))
 

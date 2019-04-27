@@ -295,12 +295,13 @@ def train_yolo_model(
             + " --annotation " + annotation \
             + " --dataset " + dataset \
             + " --lr " + learningrate \
-            + " --gpu 1.0" \
+            + " --gpu 0.0" \
             + " --batch " + batchsize \
             + " --epoch " + epoch \
             + " --save " + save \
             + " --savepb" \
-            + " --config " + config
+            + " --config " + config \
+            + " --gpu 1.0"
     else:
         config = filename \
             + " --pbLoad " + pb \
@@ -313,7 +314,8 @@ def train_yolo_model(
             + " --batch " + batchsize \
             + " --epoch " + epoch \
             + " --save " + save \
-            + " --savepb"
+            + " --savepb" \
+            + " --gpu 1.0"
     argv = config.split(" ")
     cliHandler(argv)
 
@@ -508,81 +510,82 @@ def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, 
 def MSTN_result_process(mstn_predict_result, score_source, score_target, score_weight=[1.0, 1.0], score_threshold=0.4):
     final_source = score_source * score_weight[0] + score_target * score_weight[1]
     high_score_image_flage = final_source >= score_threshold
-    return high_score_image_flage
+    low_score_image_flage = final_source < score_threshold
+    return high_score_image_flage, low_score_image_flage
 
 
 def make_yolo_xml_label(whole_pic_file_name, bwidth, bheight, bdepth, Xmin, Ymin, Xmax, Ymax, box_count, xml_path):
-    with Document() as doc:
-        annotation = doc.createElement('annotation')
-        doc.appendChild(annotation)
+    #with Document() as doc:
+    doc = Document()
+    annotation = doc.createElement('annotation')
+    doc.appendChild(annotation)
 
-        folder = doc.createElement('folder')
-        folder_text = doc.createTextNode("VOC2007")
-        folder.appendChild(folder_text)
-        annotation.appendChild(folder)
+    folder = doc.createElement('folder')
+    folder_text = doc.createTextNode("VOC2007")
+    folder.appendChild(folder_text)
+    annotation.appendChild(folder)
 
-        filename = doc.createElement('filename')
-        filename_str = whole_pic_file_name
-        filename_text = doc.createTextNode(filename_str)
-        filename.appendChild(filename_text)
-        annotation.appendChild(filename)
+    filename = doc.createElement('filename')
+    filename_str = whole_pic_file_name
+    filename_text = doc.createTextNode(filename_str)
+    filename.appendChild(filename_text)
+    annotation.appendChild(filename)
 
-        size = doc.createElement('size')
-        annotation.appendChild(size)
+    size = doc.createElement('size')
+    annotation.appendChild(size)
+    width = doc.createElement('width')
+    width_text = doc.createTextNode(str(bwidth))
+    width.appendChild(width_text)
+    size.appendChild(width)
 
-        width = doc.createElement('width')
-        width_text = doc.createTextNode(str(bwidth))
-        width.appendChild(width_text)
-        size.appendChild(width)
+    height = doc.createElement('height')
+    height_text = doc.createTextNode(str(bheight))
+    height.appendChild(height_text)
+    size.appendChild(height)
 
-        height = doc.createElement('height')
-        height_text = doc.createTextNode(str(bheight))
-        height.appendChild(height_text)
-        size.appendChild(height)
+    depth = doc.createElement('depth')
+    depth_text = doc.createTextNode(str(bdepth))
+    depth.appendChild(depth_text)
+    size.appendChild(depth)
 
-        depth = doc.createElement('depth')
-        depth_text = doc.createTextNode(str(bdepth))
-        depth.appendChild(depth_text)
-        size.appendChild(depth)
+    segmented = doc.createElement('segmented')
+    segmented_text = doc.createTextNode(str(0))
+    segmented.appendChild(segmented_text)
+    annotation.appendChild(segmented)
 
-        segmented = doc.createElement('segmented')
-        segmented_text = doc.createTextNode(str(0))
-        segmented.appendChild(segmented_text)
-        annotation.appendChild(segmented)
-
-        for box in range(box_count):
+    for box in range(box_count):
             
 
-            object1 = doc.createElement('object')
-            annotation.appendChild(object1)
+        object1 = doc.createElement('object')
+        annotation.appendChild(object1)
 
-            name = doc.createElement('name')
-            name_text = doc.createTextNode("person")
-            name.appendChild(name_text)
-            object1.appendChild(name)
+        name = doc.createElement('name')
+        name_text = doc.createTextNode("person")
+        name.appendChild(name_text)
+        object1.appendChild(name)
 
-            bndbox = doc.createElement('bndbox')
-            object1.appendChild(bndbox)
+        bndbox = doc.createElement('bndbox')
+        object1.appendChild(bndbox)
 
-            xmin = doc.createElement('xmin')
-            xmin_text = doc.createTextNode(str(Xmin[box]))
-            xmin.appendChild(xmin_text)
-            bndbox.appendChild(xmin)
+        xmin = doc.createElement('xmin')
+        xmin_text = doc.createTextNode(str(Xmin[box]))
+        xmin.appendChild(xmin_text)
+        bndbox.appendChild(xmin)
 
-            ymin = doc.createElement('ymin')
-            ymin_text = doc.createTextNode(str(Ymin[box]))
-            ymin.appendChild(ymin_text)
-            bndbox.appendChild(ymin)
+        ymin = doc.createElement('ymin')
+        ymin_text = doc.createTextNode(str(Ymin[box]))
+        ymin.appendChild(ymin_text)
+        bndbox.appendChild(ymin)
 
-            xmax = doc.createElement('xmax')
-            xmax_text = doc.createTextNode(str(Xmax[box]))
-            xmax.appendChild(xmax_text)
-            bndbox.appendChild(xmax)
+        xmax = doc.createElement('xmax')
+        xmax_text = doc.createTextNode(str(Xmax[box]))
+        xmax.appendChild(xmax_text)
+        bndbox.appendChild(xmax)
 
-            ymax = doc.createElement('ymax')
-            ymax_text = doc.createTextNode(str(Ymax[box]))
-            ymax.appendChild(ymax_text)
-            bndbox.appendChild(ymax)
+        ymax = doc.createElement('ymax')
+        ymax_text = doc.createTextNode(str(Ymax[box]))
+        ymax.appendChild(ymax_text)
+        bndbox.appendChild(ymax)
 
         with open(xml_path, 'w') as f:
             doc.writexml(f, indent='\t', newl='\n',
@@ -716,9 +719,13 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
 
 def caculate_theta(theta0, beta, nu, result, original_score):
-    zeta = np.sum(original_score * np.sign(result-0.5)) / np.sum(np.abs(original_score - beta))
+    zeta = np.sum((original_score-beta) * np.sign(result-0.5)) / np.sum(np.abs(original_score - beta))
     theta = 1 - nu * zeta
     return theta
+
+
+def class_low_result_into_subclasses():
+    pass
 
 
 def label_hard_pic_with_MSTN(
@@ -757,6 +764,8 @@ def label_hard_pic_with_MSTN(
         neg_box_number = int(number_list[0])
         hard_box_number = int(number_list[1])
         pos_box_number = int(number_list[2])
+    
+    print("{} Start classify {} hard samples.".format(datetime.datetime.now(), str(hard_box_number)))
 
     training_img_number = min(hard_box_number, 200)
     val_img_number = hard_box_number
@@ -774,7 +783,7 @@ def label_hard_pic_with_MSTN(
         return
 
     elif mstn_test == True:
-        result_total, SS = mstn_label_with_model(
+        result_total, SS, result_sub = mstn_label_with_model(
             TRAINING_FILE=mstn_source_train_label, 
             VAL_FILE=mstn_target_test_file, 
             TARGET_LABEL_FILE=mstn_target_train_label, 
@@ -785,7 +794,7 @@ def label_hard_pic_with_MSTN(
         )
 
         original_hard_score = np.loadtxt(yolo_result_dir+'position_hard.txt')
-        log_array = np.column_stack([result_total, SS[0], SS[1], original_hard_score.T[6]])
+        log_array = np.column_stack([result_total, SS[0], SS[1], original_hard_score.T[6], result_sub])
         np.savetxt(mstn_result_dir + "result+score.txt", log_array)
 
 
@@ -795,9 +804,11 @@ def label_hard_pic_with_MSTN(
     
     if add_to_trainset:
         res = np.loadtxt(mstn_result_dir + "result+score.txt")
-        high_score_image_flage = MSTN_result_process(res.T[0], res.T[1], res.T[2], score_weight=[1.0, 3.0], score_threshold=0.7)
+        high_score_image_flage, low_score_image_flage = MSTN_result_process(res.T[0], res.T[1], res.T[2], score_weight=[1.0, 3.0], score_threshold=0.8)
         np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
-        theta_new = caculate_theta(theta, beta, nu=0.85, result=res.T[0], original_score=res.T[3])
+        np.savetxt(mstn_result_dir + "low_score_index.txt", low_score_image_flage)
+
+        theta_new = caculate_theta(theta, beta, nu=1.0, result=res.T[0], original_score=res.T[3])
         print(theta_new)
 
         final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight=[1.0, 3.0])
@@ -808,7 +819,7 @@ def label_hard_pic_with_MSTN(
             yolo_train_dir + 'image_with_box/',
             picture_number=picture_number,
             start_number=np.min(final_position.T[0]).astype(np.int32),
-            confidence_limit=0.6
+            confidence_limit=0.8
         )
         print("Classified hard samples and their labels are add to yolo train set.")
 

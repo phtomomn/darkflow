@@ -70,7 +70,7 @@ class AlexNetModel(object):
                         relu=False, stddev=0.005, name='fc9')
 
         self.feature = self.fc8
-        self.result_graph = class_feature_use_graph(feature=self.feature, pca_dimension=10, k_neighbor=10)
+        self.result_graph = class_feature_use_graph(feature=self.feature, pca_dimension=64, k_neighbor=20)
         self.result = tf.argmax(self.score, 1)
         self.output = tf.nn.softmax(self.score)
     
@@ -162,7 +162,7 @@ class AlexNetModel(object):
 
         self.target_result_new = predict_result_target_final_use_graph
 
-        self.target_result_graph_sub = self.result_graph
+        self.target_result_graph_sub = predict_result_target_graph
         self.target_result_graph_total = self.target_result_new
 
         self.loss_new = tf.reduce_mean(tf.square(tf.cast(predict_result_target, tf.float32) - tf.cast(self.target_result_graph_total, tf.float32)))

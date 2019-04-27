@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 import os
 import json
+import pyximport
+pyximport.install()
 from ...cython_utils.cy_yolo_findboxes import yolo_box_constructor
 
 

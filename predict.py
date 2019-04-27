@@ -20,28 +20,32 @@ def main():
     mstn_target_train_label = "./MSTN_MODEL/MSTN_train_images/target_with_label.txt"
     mstn_target_test_file = yolo_result_dir + "picture_labels.txt"
 
-    train_yolo_picture_number = 500
-    test_yolo_picture_number = 500
+    train_yolo_picture_number = 870
+    test_yolo_picture_number = 870
     test_pictuce_start_number = 0
 
     beta = 0.5
-    theta0 = 2*0.4
+    theta0 = 2*0.25
+    theta500 = 2*0.15
+    theta1000 = 2*0.1
 
-    clow = beta - theta0/2
-    chigh = beta + theta0/2
+    theta = theta1000
+
+    clow = beta - theta/2
+    chigh = beta + theta/2
 
     train_yolo_init(
         yolo_train_dir,
         yolo_result_dir,
         mstn_result_dir,
         model=yolo_model_cfg,
-        weights=yolo_model_original,                        # 训练yolo的基础权重文件
+        weights='500', #yolo_model_original,                        # 训练yolo的基础权重文件
         annotation=yolo_train_dir + "annotation",
         dataset=yolo_train_dir + "image",
-        learningrate="0.00001",
+        learningrate="0.000005",        # before1000" 5E-6, after 1E-6
         batchsize="1",
-        epoch="100",
-        save="500",
+        epoch="20",
+        save="250",
         train_yolo=False,               # 选择是否运行此函数
         DO_NOT_DEL_TRAIN_PIC=True,      # 选择是否在训练yolo结束后清空yolo训练集 改为False时请谨慎
     )
@@ -53,14 +57,14 @@ def main():
         clow,
         chigh,
         model=yolo_model_cfg,
-        load=yolo_model_original,                        # 检测权重
+        load=1000, #yolo_model_original,                        # 检测权重
         # pb="./YOLO_MODEL/built_graph/yolo_test2.pb",      # 可选择直接使用pb文件，不能和model, weights同时赋值
         # meta="./YOLO_MODEL/built_graph/yolo_test2.meta",  # 可选择直接使用meta文件，不能和model, weights同时赋值
-        use_gpu=False,                                       # 选择是否使用gpu加速检测
+        use_gpu=True,                                       # 选择是否使用gpu加速检测
         start_number=test_pictuce_start_number,             # 待检测图片的起始编号（文件名需要0填充共6位）
         save_picture_with_box=True,                         # 选择是否保存检测结果的完整图片到yolo_result_dir
-        label_image=False,                            # 选择是否运行此函数
-        already_labeled=True
+        label_image=True,                            # 选择是否运行此函数
+        already_labeled=False
     )
 
     MSTN_train_set_init(
@@ -69,11 +73,11 @@ def main():
         MSTN_train_img_dir=mstn_train_img_dir,
         pic_num_for_train_MSTN=test_yolo_picture_number,    # 背景建模使用的视频帧数量
         positive_score_limit=0.2,                           # 背景建模中的检测结果得分阈值
-        background_modeling=False                         # 选择是否运行此函数
+        background_modeling=False                     # 选择是否运行此函数
     )
 
     label_hard_pic_with_MSTN(
-        theta0,
+        theta,
         beta,
         yolo_dir,
         mstn_dir,
@@ -82,10 +86,10 @@ def main():
         mstn_target_train_label,
         SS_limit=0.3,
         mstn_train=False,               # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
-        mstn_test=False,
-        step_log=True,                  # 选择是否计算每20步训练的结果
+        mstn_test=True,
+        step_log=False,                  # 选择是否计算每20步训练的结果
         add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
-        model_name="towncenter1000new",              # 训练/使用的模型名称
+        model_name="lot2870_yolo500",              # 训练/使用的模型名称
         train_epoch=500,                  # 训练迭代次数（四个数据集均在500左右较为合适）
         label_hard_image=True           # 选择是否运行此函数
     )

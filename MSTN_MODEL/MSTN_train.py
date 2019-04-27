@@ -1,3 +1,4 @@
+# coding=utf-8
 import datetime
 import math
 import os
@@ -548,6 +549,7 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                     batch_max = BATCH_MAX
 
                     result_graph_total = []
+                    result_graph_sub = []
                     SS_s = []
                     SS_t = []
 
@@ -563,9 +565,9 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                         batch_x_target, batch_y_target = val_preprocessor_target.next_batch(
                             batch_num_current)
                         batch_x_target_with_label, batch_y_target_with_label = val_preprocessor_target_with_label.next_batch(
-                            200)
+                            batch_num_current)
                         batch_x_source, batch_y_source = val_preprocessor_source.next_batch(
-                            200)
+                            batch_num_current)
 
                         _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _result_source, _SS_s, _SS_t = sess.run(
                             [
@@ -588,6 +590,7 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                         )
 
                         result_graph_total.append(_result_graph_total)
+                        result_graph_sub.append(_result_graph_sub)
                         SS_s.append(_SS_s)
                         SS_t.append(_SS_t)
 
@@ -596,6 +599,7 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                             _feature_target,
                             _result_source,
                             _result_graph_total,
+                            _result_graph_sub,
                             SS=_SS_s+_SS_t,
                             savedir='./MSTN_MODEL/MSTN_train_log/' + train_dir_name + model_name + '/',
                             logname=str(batch_start_num),
@@ -612,10 +616,13 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                     print("Validation done.")
                     result_graph_total = np.array(
                         [i for item in result_graph_total for i in item])
+                    result_graph_sub = np.array(
+                        [i for item in result_graph_sub for i in item]
+                    )
                     SS_s = np.array([i for item in SS_s for i in item])
                     SS_t = np.array([i for item in SS_t for i in item])
 
-                    return result_graph_total, [SS_s, SS_t]
+                    return result_graph_total, [SS_s, SS_t], result_graph_sub
 
 
 def feature_reduce_dimension(feature, final_dimension):
@@ -723,12 +730,12 @@ def draw_feature_graph(feature_source, feature_target, result_source, result_tar
 
     plt.grid(True)
     plt.legend(loc='best')
-    plt.savefig(savedir + '/' + str(count) + '.jpg')
+    plt.savefig(savedir + '/' + str(count) + '.png')
     if show:
         plt.show()
 
 
-def log_feature_low(feature_source, feature_target, result_source, result_target_total, SS, savedir, logname, SS_limit=0.2, use_SS=True):
+def log_feature_low(feature_source, feature_target, result_source, result_target_total, result_target_sub, SS, savedir, logname, SS_limit=0.2, use_SS=True):
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
@@ -766,6 +773,7 @@ def log_feature_low(feature_source, feature_target, result_source, result_target
         feature_target_low_p = feature_target_low[SS_limit_index_high_p]
         feature_target_low_n = feature_target_low[SS_limit_index_high_n]
         feature_target_useless = feature_target_low[SS_limit_index_low]
+        subclasses_target = result_target_sub[SS_limit_index_low]
 
     else:
         feature_target_low_p = feature_target_low[result_target==1]
@@ -785,10 +793,11 @@ def log_feature_low(feature_source, feature_target, result_source, result_target
                 feature_target_low_n[:, 1], marker="o", c='b')
 
     if use_SS:
-        plt.scatter(feature_target_useless[:, 0], feature_target_useless[:, 1], marker="s", c='black', alpha=0.15)
+        cm = plt.cm.get_cmap('RdYlBu')
+        plt.scatter(feature_target_useless[:, 0], feature_target_useless[:, 1], marker="s", c=subclasses_target, cmap=cm, alpha=0.5)
 
     plt.axis('off')
-    plt.savefig(savedir + "feature" + logname + ".jpg")
+    plt.savefig(savedir + "feature" + logname + ".png")
 
 
 def mstn_trainmodel_noTL(TRAINING_FILE, VAL_FILE, val_file_num=100, epochs_limit=2500, step_log=True, model_name='mstn'):
