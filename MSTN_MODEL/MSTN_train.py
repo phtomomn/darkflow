@@ -32,9 +32,6 @@ tf.app.flags.DEFINE_integer(
     'log_step', 100, 'Logging period in terms of iteration')
 
 NUM_CLASSES = 2
-#TRAINING_FILE = './MSTN_models/source.txt'
-#VAL_FILE = './test_img_predict_classes/picture_labels.txt'
-#MODEL_PATH = "./trained_mstn_model/mstnmodel_test_source_to_target2500.ckpt"
 FLAGS = tf.app.flags.FLAGS
 MAX_STEP = 10000
 MODEL_NAME = 'mstn'
@@ -376,6 +373,7 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
         saver.save(sess, last_model_path)
         print(("{} Saving checkpoint of model...".format(datetime.datetime.now())))
 
+    tf.reset_default_graph()
     return last_model_path, _result_graph_total, [_SS_s, _SS_t]
 
 

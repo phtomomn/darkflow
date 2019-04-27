@@ -284,11 +284,12 @@ def train_yolo_model(
         epoch="100", 
         save="200",
         pb='null',
-        meta='null'
+        meta='null',
+        gpu_use=False
     ):
 
     if pb == 'null':
-        config = filename \
+        configg = filename \
             + " --model " + model \
             + " --load " + weights \
             + " --train" \
@@ -300,10 +301,9 @@ def train_yolo_model(
             + " --epoch " + epoch \
             + " --save " + save \
             + " --savepb" \
-            + " --config " + config \
-            + " --gpu 1.0"
+            + " --config " + config 
     else:
-        config = filename \
+        configg = filename \
             + " --pbLoad " + pb \
             + " --metaLoad " + meta \
             + " --train" \
@@ -314,16 +314,16 @@ def train_yolo_model(
             + " --batch " + batchsize \
             + " --epoch " + epoch \
             + " --save " + save \
-            + " --savepb" \
-            + " --gpu 1.0"
-    argv = config.split(" ")
+            + " --savepb" 
+    
+    if use_gpu > 0:
+        configg += " --gpu 1.0"
+
+    argv = configg.split(" ")
     cliHandler(argv)
 
 
 def train_yolo_init(
-        yolo_train_dir, 
-        yolo_result_dir, 
-        mstn_result_dir, 
         DO_NOT_DEL_TRAIN_PIC=True, 
         train_yolo=False, 
         filename="predict.py", 
@@ -334,23 +334,12 @@ def train_yolo_init(
         learningrate="0.001", 
         batchsize="8", 
         epoch="100", 
-        save="200"
+        save="200",
+        gpu_use=False
     ):
     """
     初始化训练文件夹，并按照指定选项训练yolo
     """
-
-    """
-    if os.path.exists(yolo_result_dir) and not DO_NOT_DEL_TRAIN_PIC:
-        shutil.rmtree(yolo_result_dir)
-        os.mkdir(yolo_result_dir)
-
-    if os.path.exists(mstn_result_dir) and not DO_NOT_DEL_TRAIN_PIC:
-        shutil.rmtree(mstn_result_dir)
-        os.mkdir(mstn_result_dir)
-    """
-
-
     if train_yolo:
         train_yolo_model(
             filename=filename, 
@@ -361,7 +350,8 @@ def train_yolo_init(
             learningrate=learningrate, 
             batchsize=batchsize, 
             epoch=epoch, 
-            save=save
+            save=save,
+            gpu_use=gpu_use
         )
 
 
@@ -731,8 +721,11 @@ def class_low_result_into_subclasses():
 def label_hard_pic_with_MSTN(
         theta,
         beta,
-        yolo_dir,
-        mstn_dir,
+        yolo_train_dir,
+        yolo_test_dir,
+        yolo_result_dir,
+        mstn_result_dir,
+        mstn_train_img_dir,
         mstn_source_train_label, 
         mstn_target_test_file, 
         mstn_target_train_label, 
@@ -745,14 +738,6 @@ def label_hard_pic_with_MSTN(
         SS_limit=0.2,
         label_hard_image=True
     ):
-    yolo_train_dir = yolo_dir + 'yolo_train/'
-    yolo_test_dir = yolo_dir + 'yolo_test/'
-    yolo_result_dir = yolo_dir + 'yolo_result/'
-
-    mstn_train_img_dir = mstn_dir + 'MSTN_train_images/'
-    mstn_result_dir = mstn_dir + 'MSTN_result/'
-
-
     """
     使用MSTN模型训练分类hard样本，并将分类好的正样本加入yolo训练集中并分别制作标签
     """  
@@ -780,9 +765,9 @@ def label_hard_pic_with_MSTN(
             val_file_num=training_img_number, 
             model_name=model_name
         )
-        return
+    #    return
 
-    elif mstn_test == True:
+    if mstn_test == True:
         result_total, SS, result_sub = mstn_label_with_model(
             TRAINING_FILE=mstn_source_train_label, 
             VAL_FILE=mstn_target_test_file, 
@@ -822,6 +807,8 @@ def label_hard_pic_with_MSTN(
             confidence_limit=0.8
         )
         print("Classified hard samples and their labels are add to yolo train set.")
+    
+    return theta_new
 
 
 def label_hard_pic_with_MSTN_noTL(
