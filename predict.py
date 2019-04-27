@@ -51,6 +51,7 @@ def main():
         yolo_train_dir_prev = yolo_train_dir_original + model_name + str(i-1) + '/'
         mstn_target_test_file = yolo_result_dir + "picture_labels.txt"
 
+        dir_init(yolo_train_dir)
         dir_init(yolo_result_dir)
         dir_init(mstn_result_dir)
         dir_init(mstn_train_img_dir)
@@ -121,8 +122,8 @@ def main():
 
 
 def dir_init(dir):
-    if os.path.exists(dir):
-        os.mkdir(dir)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
 if __name__ == "__main__":
     sys.exit(main())
