@@ -21,21 +21,21 @@ def main():
 
 
     #------------------config training parameters------------------
-    train_yolo_picture_number = 5
-    test_yolo_picture_number = 5
+    #train_yolo_picture_number = 436
+    test_yolo_picture_number = 436
     test_pictuce_start_number = 0
 
-    train_yolo = True
+    train_yolo = False
     label_with_yolo = True
-    label_hard = True
-    gpu_use = 1.0
-    model_name = 'test'
+    label_hard = False
+    gpu_use = 0.0
+    model_name = 'crowd'
 
     beta = 0.5
     theta0 = 2*0.4
     #--------------------------------------------------------------
 
-    for i in range(0, 3):
+    for i in range(0, 1):
         if i == 0:
             yolomodel = yolo_model_original
             theta = theta0

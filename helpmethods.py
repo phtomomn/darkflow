@@ -39,7 +39,6 @@ def test_with_yolo(
     predict_result = []
     
     for i in range(start_number, start_number + picture_number):
-        print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)))
         imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
         img_shape = imgcv.shape[0:2]
         result = yolomodel.return_predict(imgcv)
@@ -59,7 +58,9 @@ def test_with_yolo(
                     predict_result.append([i, j, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
                     person_cnt += 1
         
-        print('\tDone. {} boxes found.'.format(str(person_cnt)))
+        print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)), end='\r')
+    
+    print('\nAll pictures are detected done.')
 
     np.savetxt(yolo_result_dir+'predict_result.txt', np.array(predict_result))
 
@@ -93,16 +94,25 @@ def save_predict_picture_with_box(
 
             if show_confidence:
                 confidence = current_box_and_confidence[6]
-                if confidence >= confidence_limit:
+                if confidence >= confidence_limit[1]:
                     cv2.rectangle(
                         img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+                
+                elif confidence >= confidence_limit[0]:
+                    cv2.rectangle(
+                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 8)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+
                 else:
                     cv2.rectangle(
-                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 5)
+                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 0, 0), 5)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (128, 128, 128), 5)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
@@ -112,9 +122,9 @@ def save_predict_picture_with_box(
                 cv2.rectangle(img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
 
         cv2.imwrite(yolo_predict_whole_pic_dir + str(i).zfill(6) + ".jpg", img)
-        print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)))
+        print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='\r')
 
-    print("{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
+    print("\n{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
 
 
 
@@ -169,7 +179,7 @@ def save_class_predict_box_sub_picture(
 
         with Image.open(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg") as img:
             for j in range(box_number):
-                print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(start_number-i+1), str(picture_number)))
+                print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)), end='\r')
                 current_box_and_confidence = current_predict[j]
                 current_box = current_box_and_confidence[2:6]
                 confidence = current_box_and_confidence[6]
@@ -206,6 +216,8 @@ def save_class_predict_box_sub_picture(
                     box_count_p += 1
             
                 cnt += 1
+            
+    print('\nSaving boxes done.')
 
     with open(yolo_result_dir + "picture_numbers.txt", 'w') as f:
         f.write(str(box_count_n)+" "+str(box_count_h) +
@@ -430,7 +442,7 @@ def label_with_YOLO(
             yolo_result_dir,
             picture_number, 
             start_number=start_number, 
-            confidence_limit=confidence_limit_low
+            confidence_limit=0.08
         )
 
     save_class_predict_box_sub_picture(
@@ -455,7 +467,7 @@ def label_with_YOLO(
             yolo_result_dir + "whole_pic/", 
             picture_number, 
             start_number=start_number, 
-            confidence_limit=confidence_limit_high
+            confidence_limit=[confidence_limit_low, confidence_limit_high]
         )
     
 
@@ -666,7 +678,7 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     box_count = 0
     for pic in range(0, np.max(final_position.T[1]).astype(np.int32)+1):
-        print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)))
+        print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)), end='\r')
         current_pic_index = np.where(final_position.T[1] == pic)[0]
 
         if current_pic_index.shape[0] == 0:
@@ -801,10 +813,10 @@ def label_hard_pic_with_MSTN(
         save_predict_picture_with_box(
             yolo_test_dir + 'image/',
             yolo_train_dir + 'labels.txt',
-            yolo_train_dir + 'image_with_box/',
+            yolo_train_dir + 'hard_results_whole_image/',
             picture_number=picture_number,
             start_number=np.min(final_position.T[0]).astype(np.int32),
-            confidence_limit=0.8
+            confidence_limit=[0, 0.8]
         )
         print("Classified hard samples and their labels are add to yolo train set.")
     

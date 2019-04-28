@@ -34,6 +34,7 @@ def MakeMeanBackground(pic_dir, GT, result_save_path, t=0, step=1, score_limit=0
 
     frame_previous = cv2.imread(pic_dir + str(0).zfill(6) + ".jpg")
     for pic in range(0, pic_num, step):
+        print('Making background image {}/{}...'.format(str(pic+1), str(pic_num)), end='\r')
         mask_groundtruth = np.ones_like(first_frame, dtype=np.int32)
         frame_current = cv2.imread(pic_dir + str(pic).zfill(6) + ".jpg")
 
@@ -64,6 +65,8 @@ def MakeMeanBackground(pic_dir, GT, result_save_path, t=0, step=1, score_limit=0
         
         
         frame_previous = frame_current
+
+    print('\nMaking background image done.')
     
     cv2.imwrite(result_save_path, back)
 
@@ -118,13 +121,14 @@ def MakeLabel(positive_result, negative_result, result_file):
                     
 
 def main():
-    gt = ReadGT(GT_file="./GT100.txt", pic_num=100)
+    pass
+    #gt = ReadGT(GT_file="./GT100.txt", pic_num=100)
     #MakeMeanBackground(pic_dir="./VideoFrames/", GT=gt, result_save_path="./result.jpg", step=2, pic_num=100) #, log=True, log_dir="./log/")
-    person_count = MakePositiveSamples(pic_dir="./VideoFrames/", GT=gt, result_save_path="./target_person/", pic_num=100, step=3)
-    back_count = CutBackgroundPic(back_pic="./result.jpg", result_save_path="./target_background/", block_size=[200,100], step_per_block=2)
-    MakeLabel(positive_path="./target_person/", negative_path="./target_background/", positive_count=person_count, negative_count=back_count, result_save_path="./target_with_label.txt")
+    #person_count = MakePositiveSamples(pic_dir="./VideoFrames/", GT=gt, result_save_path="./target_person/", pic_num=100, step=3)
+    #back_count = CutBackgroundPic(back_pic="./result.jpg", result_save_path="./target_background/", block_size=[200,100], step_per_block=2)
+    #MakeLabel(positive_path="./target_person/", negative_path="./target_background/", positive_count=person_count, negative_count=back_count, result_save_path="./target_with_label.txt")
 
-    print(person_count, back_count)
+    #print(person_count, back_count)
 
 if __name__ == "__main__":
     sys.exit(main())

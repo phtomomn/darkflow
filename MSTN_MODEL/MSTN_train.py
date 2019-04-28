@@ -197,12 +197,12 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
             if exit_flag:
                 break
 
-            print("Epoch number: {}".format(epoch+1))
+            print("Epoch number: {}".format(epoch+1), end='\r')
             step = 1
             # Start training
             while step < train_batches_per_epoch_source:
                 gd += 1
-                print(gd)
+                print('Training classifier {}/{}'.format(str(gd), str(epochs_limit)), end='\r')
                 lamb = adaptation_factor(gd*1.0/MAX_STEP)
                 rate = decay(FLAGS.learning_rate, gd, MAX_STEP)
 
@@ -605,13 +605,13 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                         )
 
                         print("Validation %.2f %% ..." %
-                              (100*val_preprocessor_target.pointer/val_file_num))
+                              (100*val_preprocessor_target.pointer/val_file_num), end='\r')
 
                         # Reset the dataset pointers
                         val_preprocessor_target_with_label.reset_pointer()
                         val_preprocessor_source.reset_pointer()
 
-                    print("Validation done.")
+                    print("\nValidation done.")
                     result_graph_total = np.array(
                         [i for item in result_graph_total for i in item])
                     result_graph_sub = np.array(
@@ -1298,7 +1298,7 @@ def mstn_label_with_model_noTL(MODEL_PATH, TRAINING_FILE, VAL_FILE, val_file_num
                         )
 
                         print("Validation %.2f %% ..." %
-                              (100*val_preprocessor_target.pointer/val_file_num))
+                              (100*val_preprocessor_target.pointer/val_file_num), end='\r')
 
                         # Reset the dataset pointers
                         # val_preprocessor_target.reset_pointer()
