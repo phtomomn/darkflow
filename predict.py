@@ -25,17 +25,17 @@ def main():
     test_yolo_picture_number = 436
     test_pictuce_start_number = 0
 
-    train_yolo = False
+    train_yolo = True
     label_with_yolo = True
-    label_hard = False
+    label_hard = True
     gpu_use = 0.0
-    model_name = 'crowd'
+    model_name = 'crowdNEW'
 
     beta = 0.5
     theta0 = 2*0.4
     #--------------------------------------------------------------
 
-    for i in range(0, 1):
+    for i in range(0, 5):
         if i == 0:
             yolomodel = yolo_model_original
             theta = theta0
