@@ -35,7 +35,7 @@ def main():
     model_name = 'crowdNEW-0429'
 
     train_yolo[0:3] = 0
-    label_with_yolo[0:3] = 0
+    label_with_yolo[0:2] = 0
     label_hard[0:2] = 0
 
     # --------------------------------------------------------------
@@ -133,6 +133,8 @@ def main():
             train_epoch=mstn_train_step,                  # 训练迭代次数（四个数据集均在500左右较为合适）
             label_hard_image=label_hard[i]
         )
+
+    np.savetxt('./theta'+str(i)+'.txt', theta)
 
 
 def dir_init(dir):
