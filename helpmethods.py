@@ -16,6 +16,8 @@ from darkflow.net.build import TFNet
 from MSTN_MODEL.MSTN_train import mstn_label_with_model, mstn_trainmodel
 from MSTN_MODEL.MSTN_train import mstn_label_with_model_noTL, mstn_trainmodel_noTL
 
+py3 = True
+
 
 def test_with_yolo(
         yolomodel, 
@@ -58,7 +60,10 @@ def test_with_yolo(
                     predict_result.append([i, j, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
                     person_cnt += 1
         
-        print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)), end='\r')
+        if py3:
+            print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)), end='\r')
+        else:
+            print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)))
     
     print('\nAll pictures are detected done.')
 
@@ -122,7 +127,11 @@ def save_predict_picture_with_box(
                 cv2.rectangle(img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
 
         cv2.imwrite(yolo_predict_whole_pic_dir + str(i).zfill(6) + ".jpg", img)
-        print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='\r')
+
+        if py3:
+            print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='\r')
+        else:
+            print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)))
 
     print("\n{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
 
@@ -179,7 +188,11 @@ def save_class_predict_box_sub_picture(
 
         with Image.open(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg") as img:
             for j in range(box_number):
-                print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)), end='\r')
+                if py3:
+                    print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)), end='\r')
+                else:
+                    print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)))
+
                 current_box_and_confidence = current_predict[j]
                 current_box = current_box_and_confidence[2:6]
                 confidence = current_box_and_confidence[6]
@@ -312,7 +325,6 @@ def train_yolo_model(
             + " --batch " + batchsize \
             + " --epoch " + epoch \
             + " --save " + save \
-            + " --savepb" \
             + " --config " + config 
     else:
         configg = filename \
@@ -325,10 +337,9 @@ def train_yolo_model(
             + " --gpu 1.0" \
             + " --batch " + batchsize \
             + " --epoch " + epoch \
-            + " --save " + save \
-            + " --savepb" 
+            + " --save " + save 
     
-    if use_gpu > 0:
+    if gpu_use > 0:
         configg += " --gpu 1.0"
 
     argv = configg.split(" ")
@@ -678,7 +689,10 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     box_count = 0
     for pic in range(0, np.max(final_position.T[1]).astype(np.int32)+1):
-        print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)), end='\r')
+        if py3:
+            print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)), end='\r')
+        else:
+            print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)))
         current_pic_index = np.where(final_position.T[1] == pic)[0]
 
         if current_pic_index.shape[0] == 0:
@@ -720,8 +734,11 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
     return final_position
 
 
-def caculate_theta(theta0, beta, nu, result, original_score):
-    zeta = np.sum((original_score-beta) * np.sign(result-0.5)) / np.sum(np.abs(original_score - beta))
+def caculate_theta(theta0, beta, nu, result, original_score, ss0, ss1, ss_weight):
+    ss = ss0*ss_weight[0] + ss1*ss_weight[1]
+    ss = ss/(2*np.max(ss))
+    delta = original_score - beta
+    zeta = np.sum(ss * np.sign(result-0.5)) / np.sum(np.abs(delta))
     theta = 1 - nu * zeta
     return theta
 
@@ -805,7 +822,7 @@ def label_hard_pic_with_MSTN(
         np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
         np.savetxt(mstn_result_dir + "low_score_index.txt", low_score_image_flage)
 
-        theta_new = caculate_theta(theta, beta, nu=1.0, result=res.T[0], original_score=res.T[3])
+        theta_new = caculate_theta(theta, beta, nu=0.75, result=res.T[0], original_score=res.T[3], ss0=res.T[1], ss1=res.T[2], ss_weight=[1.0, 3.0])
         print(theta_new)
 
         final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight=[1.0, 3.0])
