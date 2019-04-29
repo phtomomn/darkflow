@@ -16,11 +16,8 @@ def main():
     mstn_train_img_dir = "./MSTN_MODEL/MSTN_train_images/"
     mstn_source_train_label = "./MSTN_MODEL/MSTN_train_images/source.txt"
     mstn_target_train_label = "./MSTN_MODEL/MSTN_train_images/target_with_label.txt"
-    
 
-
-
-    #------------------config training parameters------------------
+    # ------------------config training parameters------------------
     #train_yolo_picture_number = 436
     test_yolo_picture_number = 436
     test_pictuce_start_number = 0
@@ -29,33 +26,42 @@ def main():
     label_with_yolo = True
     label_hard = True
     gpu_use = 0.0
-    model_name = 'crowdNEW'
+    model_name = 'crowdNEW-0429'
 
     beta = 0.5
     theta0 = 2*0.4
-    #--------------------------------------------------------------
-
-    for i in range(0, 5):
-        if i == 0:
+    run_time = 5
+    mstn_train_step_range = [500, 1500]
+    # --------------------------------------------------------------
+    theta = 0.66853
+    for i in range(1, run_time):
+        if i <= 1:
             yolomodel = yolo_model_original
-            theta = theta0
-
         else:
             yolomodel = -1
+
+        if i == 0:
+            theta = theta0
+
+        if not run_time == 1:
+            mstn_train_step = mstn_train_step_range[1] - i * (
+                mstn_train_step_range[1] - mstn_train_step_range[0])/(run_time-1)
+        else:
+            mstn_train_step = mstn_train_step_range[1]
 
         clow = beta - theta/2
         chigh = beta + theta/2
 
         yolo_result_dir = yolo_result_dir_base + model_name + str(i) + '/'
         yolo_train_dir = yolo_train_dir_original + model_name + str(i) + '/'
-        yolo_train_dir_prev = yolo_train_dir_original + model_name + str(i-1) + '/'
+        yolo_train_dir_prev = yolo_train_dir_original + \
+            model_name + str(i-1) + '/'
         mstn_target_test_file = yolo_result_dir + "picture_labels.txt"
 
         dir_init(yolo_train_dir)
         dir_init(yolo_result_dir)
         dir_init(mstn_result_dir)
         dir_init(mstn_train_img_dir)
-        
 
         train_yolo_init(
             model=yolo_model_cfg,
@@ -79,8 +85,6 @@ def main():
             chigh,
             model=yolo_model_cfg,
             load=yolomodel,                        # 检测权重
-            # pb="./YOLO_MODEL/built_graph/yolo_test2.pb",      # 可选择直接使用pb文件，不能和model, weights同时赋值
-            # meta="./YOLO_MODEL/built_graph/yolo_test2.meta",  # 可选择直接使用meta文件，不能和model, weights同时赋值
             use_gpu=gpu_use,                                       # 选择是否使用gpu加速检测
             start_number=test_pictuce_start_number,             # 待检测图片的起始编号（文件名需要0填充共6位）
             # 选择是否保存检测结果的完整图片到yolo_result_dir
@@ -109,14 +113,14 @@ def main():
             mstn_source_train_label,
             mstn_target_test_file,
             mstn_target_train_label,
-            SS_limit=0.3,
+            SS_limit=0.5,
             # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
             mstn_train=True,
             mstn_test=True,
             step_log=False,                  # 选择是否计算每20步训练的结果
             add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
             model_name=model_name+'_yolo'+str(i),          # 训练/使用的模型名称
-            train_epoch=500,                  # 训练迭代次数（四个数据集均在500左右较为合适）
+            train_epoch=mstn_train_step,                  # 训练迭代次数（四个数据集均在500左右较为合适）
             label_hard_image=label_hard
         )
 
@@ -124,6 +128,7 @@ def main():
 def dir_init(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
+
 
 if __name__ == "__main__":
     sys.exit(main())
