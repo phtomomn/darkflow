@@ -530,7 +530,7 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
 
         # Directly restore (your model should be exactly the same with checkpoint)
         if MODEL_PATH == 'null':
-            MODEL_PATH = "./MSTN_MODEL/trained_models/" + model_name + str(train_epoch) + ".ckpt"
+            MODEL_PATH = "./MSTN_MODEL/trained_models/" + model_name + str(int(train_epoch)) + ".ckpt"
 
         saver.restore(sess, MODEL_PATH)
 
@@ -629,8 +629,12 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                     )
                     SS_s = np.array([i for item in SS_s for i in item])
                     SS_t = np.array([i for item in SS_t for i in item])
+                    break
+            
+            break
 
-                    return result_graph_total, [SS_s, SS_t], result_graph_sub
+    tf.reset_default_graph()
+    return result_graph_total, [SS_s, SS_t], result_graph_sub
 
 
 def feature_reduce_dimension(feature, final_dimension):

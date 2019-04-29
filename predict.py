@@ -1,5 +1,6 @@
 # coding=utf-8
 from helpmethods import *
+import numpy as np
 import sys
 import os
 
@@ -22,23 +23,32 @@ def main():
     test_yolo_picture_number = 436
     test_pictuce_start_number = 0
 
-    train_yolo = True
-    label_with_yolo = True
-    label_hard = True
-    gpu_use = 0.0
-    model_name = 'crowdNEW-0429'
-
     beta = 0.5
     theta0 = 2*0.4
     run_time = 5
     mstn_train_step_range = [500, 1500]
+
+    train_yolo = np.ones([run_time], dtype=np.int)
+    label_with_yolo = np.ones([run_time], dtype=np.int)
+    label_hard = np.ones([run_time], dtype=np.int)
+    gpu_use = 0.0
+    model_name = 'crowdNEW-0429'
+
+    train_yolo[0:3] = 0
+    label_with_yolo[0:3] = 0
+    label_hard[0:2] = 0
+
     # --------------------------------------------------------------
-    theta = 0.66853
-    for i in range(1, run_time):
+    #theta = 0.66853
+    theta = 0.5010323868913487
+    for i in range(2, run_time):
         if i <= 1:
-            yolomodel = yolo_model_original
+            yolomodel = 1500 #yolo_model_original
+            mstntrain = 0
+
         else:
             yolomodel = -1
+            mstntrain = 1
 
         if i == 0:
             theta = theta0
@@ -70,9 +80,9 @@ def main():
             dataset=yolo_train_dir_prev + "image",
             learningrate="0.000005",
             batchsize="1",
-            epoch="5",
+            epoch="3",
             save="250",
-            train_yolo=train_yolo*i,
+            train_yolo=train_yolo[i]*i,
             gpu_use=gpu_use,
             DO_NOT_DEL_TRAIN_PIC=True,      # 选择是否在训练yolo结束后清空yolo训练集 改为False时请谨慎
         )
@@ -89,7 +99,7 @@ def main():
             start_number=test_pictuce_start_number,             # 待检测图片的起始编号（文件名需要0填充共6位）
             # 选择是否保存检测结果的完整图片到yolo_result_dir
             save_picture_with_box=True,
-            label_image=label_with_yolo,
+            label_image=label_with_yolo[i],
             already_labeled=False
         )
 
@@ -99,7 +109,7 @@ def main():
             MSTN_train_img_dir=mstn_train_img_dir,
             pic_num_for_train_MSTN=test_yolo_picture_number,    # 背景建模使用的视频帧数量
             positive_score_limit=0.2,                           # 背景建模中的检测结果得分阈值
-            background_modeling=label_hard
+            background_modeling=label_hard[i]
         )
 
         theta = label_hard_pic_with_MSTN(
@@ -115,13 +125,13 @@ def main():
             mstn_target_train_label,
             SS_limit=0.5,
             # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
-            mstn_train=True,
-            mstn_test=True,
+            mstn_train=True*mstntrain,
+            mstn_test=True*mstntrain,
             step_log=False,                  # 选择是否计算每20步训练的结果
             add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
-            model_name=model_name+'_yolo'+str(i),          # 训练/使用的模型名称
+            model_name=model_name+'_yolo'+str(int(i)),          # 训练/使用的模型名称
             train_epoch=mstn_train_step,                  # 训练迭代次数（四个数据集均在500左右较为合适）
-            label_hard_image=label_hard
+            label_hard_image=label_hard[i]
         )
 
 
