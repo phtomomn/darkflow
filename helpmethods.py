@@ -16,6 +16,8 @@ from darkflow.net.build import TFNet
 from MSTN_MODEL.MSTN_train import mstn_label_with_model, mstn_trainmodel
 from MSTN_MODEL.MSTN_train import mstn_label_with_model_noTL, mstn_trainmodel_noTL
 
+py3 = True
+
 
 def test_with_yolo(
         yolomodel, 
@@ -39,7 +41,6 @@ def test_with_yolo(
     predict_result = []
     
     for i in range(start_number, start_number + picture_number):
-        print('detecting {}/{}...'.format(str(i-start_number+1), str(picture_number)))
         imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
         img_shape = imgcv.shape[0:2]
         result = yolomodel.return_predict(imgcv)
@@ -59,7 +60,12 @@ def test_with_yolo(
                     predict_result.append([i, j, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
                     person_cnt += 1
         
-        print('\tDone. {} boxes found.'.format(str(person_cnt)))
+        if py3:
+            print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)), end='\r')
+        else:
+            print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)))
+    
+    print('\nAll pictures are detected done.')
 
     np.savetxt(yolo_result_dir+'predict_result.txt', np.array(predict_result))
 
@@ -93,16 +99,25 @@ def save_predict_picture_with_box(
 
             if show_confidence:
                 confidence = current_box_and_confidence[6]
-                if confidence >= confidence_limit:
+                if confidence >= confidence_limit[1]:
                     cv2.rectangle(
                         img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+                
+                elif confidence >= confidence_limit[0]:
+                    cv2.rectangle(
+                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 8)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
+                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                        current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
+
                 else:
                     cv2.rectangle(
-                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 5)
+                        img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 0, 0), 5)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (128, 128, 128), 5)
                     cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
@@ -112,9 +127,13 @@ def save_predict_picture_with_box(
                 cv2.rectangle(img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
 
         cv2.imwrite(yolo_predict_whole_pic_dir + str(i).zfill(6) + ".jpg", img)
-        print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)))
 
-    print("{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
+        if py3:
+            print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='\r')
+        else:
+            print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)))
+
+    print("\n{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
 
 
 
@@ -169,7 +188,11 @@ def save_class_predict_box_sub_picture(
 
         with Image.open(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg") as img:
             for j in range(box_number):
-                print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(start_number-i+1), str(picture_number)))
+                if py3:
+                    print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)), end='\r')
+                else:
+                    print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)))
+
                 current_box_and_confidence = current_predict[j]
                 current_box = current_box_and_confidence[2:6]
                 confidence = current_box_and_confidence[6]
@@ -206,6 +229,8 @@ def save_class_predict_box_sub_picture(
                     box_count_p += 1
             
                 cnt += 1
+            
+    print('\nSaving boxes done.')
 
     with open(yolo_result_dir + "picture_numbers.txt", 'w') as f:
         f.write(str(box_count_n)+" "+str(box_count_h) +
@@ -300,7 +325,6 @@ def train_yolo_model(
             + " --batch " + batchsize \
             + " --epoch " + epoch \
             + " --save " + save \
-            + " --savepb" \
             + " --config " + config 
     else:
         configg = filename \
@@ -313,10 +337,9 @@ def train_yolo_model(
             + " --gpu 1.0" \
             + " --batch " + batchsize \
             + " --epoch " + epoch \
-            + " --save " + save \
-            + " --savepb" 
+            + " --save " + save 
     
-    if use_gpu > 0:
+    if gpu_use > 0:
         configg += " --gpu 1.0"
 
     argv = configg.split(" ")
@@ -430,7 +453,7 @@ def label_with_YOLO(
             yolo_result_dir,
             picture_number, 
             start_number=start_number, 
-            confidence_limit=confidence_limit_low
+            confidence_limit=0.08
         )
 
     save_class_predict_box_sub_picture(
@@ -455,7 +478,7 @@ def label_with_YOLO(
             yolo_result_dir + "whole_pic/", 
             picture_number, 
             start_number=start_number, 
-            confidence_limit=confidence_limit_high
+            confidence_limit=[confidence_limit_low, confidence_limit_high]
         )
     
 
@@ -666,7 +689,10 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     box_count = 0
     for pic in range(0, np.max(final_position.T[1]).astype(np.int32)+1):
-        print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)))
+        if py3:
+            print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)), end='\r')
+        else:
+            print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)))
         current_pic_index = np.where(final_position.T[1] == pic)[0]
 
         if current_pic_index.shape[0] == 0:
@@ -708,8 +734,12 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
     return final_position
 
 
-def caculate_theta(theta0, beta, nu, result, original_score):
-    zeta = np.sum((original_score-beta) * np.sign(result-0.5)) / np.sum(np.abs(original_score - beta))
+def caculate_theta(theta0, beta, nu, result, original_score, ss0, ss1, ss_weight):
+    ss = ss0*ss_weight[0] + ss1*ss_weight[1]
+    result_bool = result == 1
+    delta = original_score - beta
+    ss = ss/np.max(ss)
+    zeta = np.sum(delta * result_bool * ss) / np.sum(np.abs(delta))
     theta = 1 - nu * zeta
     return theta
 
@@ -793,18 +823,19 @@ def label_hard_pic_with_MSTN(
         np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
         np.savetxt(mstn_result_dir + "low_score_index.txt", low_score_image_flage)
 
-        theta_new = caculate_theta(theta, beta, nu=1.0, result=res.T[0], original_score=res.T[3])
+        theta_new = caculate_theta(theta, beta, nu=0.75, result=res.T[0], original_score=res.T[3], ss0=res.T[1], ss1=res.T[2], ss_weight=[1.0, 3.0])
         print(theta_new)
 
+        return theta_new
         final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight=[1.0, 3.0])
         picture_number = (np.max(final_position.T[1]) - np.min(final_position.T[1]) + 1).astype(np.int32)
         save_predict_picture_with_box(
             yolo_test_dir + 'image/',
             yolo_train_dir + 'labels.txt',
-            yolo_train_dir + 'image_with_box/',
+            yolo_train_dir + 'hard_results_whole_image/',
             picture_number=picture_number,
             start_number=np.min(final_position.T[0]).astype(np.int32),
-            confidence_limit=0.8
+            confidence_limit=[0, 0.8]
         )
         print("Classified hard samples and their labels are add to yolo train set.")
     

@@ -16,6 +16,8 @@ from MSTN_MODEL.MSTN_models.mstnmodel_new import AlexNetModel
 from MSTN_MODEL.MSTN_models.mstnmodel_noTL import AlexNetModel as AlexNetModel_noTL
 from MSTN_MODEL.MSTN_models.preprocessor import BatchPreprocessor
 
+py3 = True
+
 tf.app.flags.DEFINE_float('learning_rate', 0.001,
                           'Learning rate for adam optimizer')  # 0.001
 tf.app.flags.DEFINE_float('dropout_keep_prob', 0.5, 'Dropout keep probability')
@@ -197,12 +199,16 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
             if exit_flag:
                 break
 
-            print("Epoch number: {}".format(epoch+1))
+            print("\nEpoch number: {}".format(str(epoch+1)))
             step = 1
             # Start training
             while step < train_batches_per_epoch_source:
                 gd += 1
-                print(gd)
+                if py3:
+                    print('Training classifier {}/{}'.format(str(gd), str(epochs_limit)), end='\r')
+                else:
+                    print('Training classifier {}/{}'.format(str(gd), str(epochs_limit)))
+
                 lamb = adaptation_factor(gd*1.0/MAX_STEP)
                 rate = decay(FLAGS.learning_rate, gd, MAX_STEP)
 
@@ -524,7 +530,7 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
 
         # Directly restore (your model should be exactly the same with checkpoint)
         if MODEL_PATH == 'null':
-            MODEL_PATH = "./MSTN_MODEL/trained_models/" + model_name + str(train_epoch) + ".ckpt"
+            MODEL_PATH = "./MSTN_MODEL/trained_models/" + model_name + str(int(train_epoch)) + ".ckpt"
 
         saver.restore(sess, MODEL_PATH)
 
@@ -604,14 +610,18 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                             SS_limit=SS_limit
                         )
 
-                        print("Validation %.2f %% ..." %
-                              (100*val_preprocessor_target.pointer/val_file_num))
+                        if py3:
+                            print("Validation %.2f %% ..." %
+                                (100*val_preprocessor_target.pointer/val_file_num), end='\r')
+                        else:
+                            print("Validation %.2f %% ..." %
+                                (100*val_preprocessor_target.pointer/val_file_num))
 
                         # Reset the dataset pointers
                         val_preprocessor_target_with_label.reset_pointer()
                         val_preprocessor_source.reset_pointer()
 
-                    print("Validation done.")
+                    print("\nValidation done.")
                     result_graph_total = np.array(
                         [i for item in result_graph_total for i in item])
                     result_graph_sub = np.array(
@@ -619,8 +629,12 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                     )
                     SS_s = np.array([i for item in SS_s for i in item])
                     SS_t = np.array([i for item in SS_t for i in item])
+                    break
+            
+            break
 
-                    return result_graph_total, [SS_s, SS_t], result_graph_sub
+    tf.reset_default_graph()
+    return result_graph_total, [SS_s, SS_t], result_graph_sub
 
 
 def feature_reduce_dimension(feature, final_dimension):
@@ -1298,7 +1312,7 @@ def mstn_label_with_model_noTL(MODEL_PATH, TRAINING_FILE, VAL_FILE, val_file_num
                         )
 
                         print("Validation %.2f %% ..." %
-                              (100*val_preprocessor_target.pointer/val_file_num))
+                              (100*val_preprocessor_target.pointer/val_file_num)) # , end='\r')
 
                         # Reset the dataset pointers
                         # val_preprocessor_target.reset_pointer()
