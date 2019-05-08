@@ -70,7 +70,7 @@ class AlexNetModel(object):
                         relu=False, stddev=0.005, name='fc9')
 
         self.feature = self.fc8
-        self.result_graph = class_feature_use_graph(feature=self.feature, pca_dimension=64, k_neighbor=20)
+        #self.result_graph = class_feature_use_graph(feature=self.feature, pca_dimension=64, k_neighbor=20)
         self.result = tf.argmax(self.score, 1)
         self.output = tf.nn.softmax(self.score)
     
@@ -97,11 +97,12 @@ class AlexNetModel(object):
             scope.reuse_variables()
             self.inference(x, training=True)
             feature_source = self.feature
+            feature_number = tf.shape(feature_source)[0]
 
             scope.reuse_variables()
             self.inference(xt, training=True)
             feature_target = self.feature
-            predict_result_target_graph = self.result_graph
+            #predict_result_target_graph = self.result_graph
             output_target = self.output
 
             #=====Add at 2019.03.20=====
@@ -109,6 +110,14 @@ class AlexNetModel(object):
             self.inference(xtl, training=True)
             feature_target_with_label = self.feature
             #=====end=====
+        
+        self.feature_total = tf.concat([feature_source, feature_target, feature_target_with_label], 0)
+        self.feature_total_low = pca_via_svd(self.feature_total, 16)
+        self.feature_source_low = self.feature_total_low[0:feature_number]
+        self.feature_target_low = self.feature_total_low[feature_number:2*feature_number]
+        self.feature_target_with_label_low = self.feature_total_low[2*feature_number: 3*feature_number]
+        predict_result_target_graph = class_feature_use_graph(self.feature_target_low, k_neighbor=5, pca=False)
+        self.result_graph = predict_result_target_graph
 
         predict_result_source = tf.argmax(y, 1)                 #分类结果，范围[0, num_class]
         predict_result_target_label = tf.argmax(ytl, 1)
@@ -118,6 +127,7 @@ class AlexNetModel(object):
         self.feature_source = feature_source
 
         self.result_source = predict_result_source
+        self.result_target_label = predict_result_target_label
 
         predict_result = tf.concat([predict_result_source, predict_result_target], axis=0)
 

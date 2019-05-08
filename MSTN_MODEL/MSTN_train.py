@@ -288,17 +288,20 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
                     batch_x_target_with_label, batch_y_target_with_label = val_preprocessor_target_with_label.next_batch(
                         val_file_num)
                     batch_x_source, batch_y_source = val_preprocessor_source.next_batch(
-                        200)
+                        val_file_num)
 
-                    _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _result_source, _SS_s, _SS_t = sess.run(
+                    _feature_total, _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _feature_target_with_label, _result_source, _SS_s, _SS_t, _result_target_label = sess.run(
                         [
+                            model.feature_total_low,
                             model.result_graph,
                             model.target_result_new,
-                            model.feature_source,
-                            model.feature_target,
+                            model.feature_source_low,
+                            model.feature_target_low,
+                            model.feature_target_with_label_low,
                             model.result_source,
                             model.SemanticScore_source,
-                            model.SemanticScore_target
+                            model.SemanticScore_target,
+                            model.result_target_label
                         ],
                         feed_dict={
                             x: batch_x_source,
@@ -316,7 +319,9 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
                     draw_feature_graph(
                         _feature_source,
                         _feature_target,
+                        _feature_target_with_label,
                         _result_source,
+                        _result_target_label,
                         _result_graph_sub,
                         _result_graph_total,
                         './MSTN_MODEL/MSTN_train_log/' + train_dir_name + model_name,
@@ -344,17 +349,20 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
                     batch_x_target_with_label, batch_y_target_with_label = val_preprocessor_target_with_label.next_batch(
                         val_file_num)
                     batch_x_source, batch_y_source = val_preprocessor_source.next_batch(
-                        200)
+                        val_file_num)
 
-                    _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _result_source, _SS_s, _SS_t = sess.run(
+                    _feature_total, _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _feature_target_with_label, _result_source, _SS_s, _SS_t, _result_target_label = sess.run(
                         [
+                            model.feature_total_low,
                             model.result_graph,
                             model.target_result_new,
-                            model.feature_source,
-                            model.feature_target,
+                            model.feature_source_low,
+                            model.feature_target_low,
+                            model.feature_target_with_label_low,
                             model.result_source,
                             model.SemanticScore_source,
-                            model.SemanticScore_target
+                            model.SemanticScore_target,
+                            model.result_target_label
                         ],
                         feed_dict={
                             x: batch_x_source,
@@ -365,12 +373,6 @@ def mstn_trainmodel(TARGET_LABEL_FILE, TRAINING_FILE, VAL_FILE, val_file_num=100
                             dropout_keep_prob: 1.0
                         }
                     )
-
-                    print(_result_graph_sub, _result_graph_total)
-                    print(_SS_s, _SS_t)
-
-                    draw_feature_graph(_feature_source, _feature_target, _result_source, _result_graph_sub,
-                                       _result_graph_total, './MSTN_MODEL/MSTN_train_log/' + train_dir_name, gd)
 
                     break
 
@@ -573,7 +575,7 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                         batch_x_source, batch_y_source = val_preprocessor_source.next_batch(
                             batch_num_current)
 
-                        _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _result_source, _SS_s, _SS_t = sess.run(
+                        _result_graph_sub, _result_graph_total, _feature_source, _feature_target, _result_source, _SS_s, _SS_t, _feature_target_low, _feature_total_low = sess.run(
                             [
                                 model.result_graph,
                                 model.target_result_new,
@@ -581,7 +583,9 @@ def mstn_label_with_model(TRAINING_FILE, TARGET_LABEL_FILE, VAL_FILE, val_file_n
                                 model.feature_target,
                                 model.result_source,
                                 model.SemanticScore_source,
-                                model.SemanticScore_target
+                                model.SemanticScore_target,
+                                model.feature_target_low,
+                                model.feature_total_low
                             ],
                             feed_dict={
                                 x: batch_x_source,
@@ -691,31 +695,31 @@ def draw_feature(feature, result, savedir, count, show=False):
         plt.show()
 
 
-def draw_feature_graph(feature_source, feature_target, result_source, result_target_sub, result_target_total, savedir, count, show=False):
+def draw_feature_graph(feature_source, feature_target, feature_target_with_label, result_source, result_target_label, result_target_sub, result_target_total, savedir, count, show=False):
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
     result = np.array(result_target_total)
-    acc_p = 2 * np.sum((result_target_total == 1)[0:50])
-    acc_n = 2 * np.sum((result_target_total == 0)[50:100])
+    result_target_label = result_target_label.astype(np.int)
 
     source_num = np.shape(feature_source)
     target_num = np.shape(feature_target)
+    target_label_num = np.shape(feature_target_with_label)
 
-    feature_total = np.concatenate([feature_source, feature_target], axis=0)
+    feature_total = np.concatenate([feature_source, feature_target, feature_target_with_label], axis=0)
     feature_total_low = feature_reduce_dimension(feature_total, 2)
 
     feature_source_low = feature_total_low[0:source_num[0]]
-    feature_target_low = feature_total_low[source_num[0]
-        :source_num[0]+target_num[0]]
+    feature_target_low = feature_total_low[source_num[0]:source_num[0]+target_num[0]]
+    feature_target_label_low = feature_total_low[source_num[0]+target_num[0]:source_num[0]+target_num[0]+target_label_num[0]]
     color1 = cycle('bgr')
     color2 = cycle('bgr')
+    color3 = cycle('bgr')
     colors = cycle('cmykcmykcmykcmyk')
 
     fig = plt.figure(count)
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.title('step = ' + str(count) + ' p = '+str(acc_p) + ' n = '+str(acc_n))
 
     for k, c1 in zip(range(np.min(result_source), np.max(result_source)+1), color1):
         class_members = np.array(result_source) == k
@@ -723,9 +727,16 @@ def draw_feature_graph(feature_source, feature_target, result_source, result_tar
         plt.scatter(feature_source_low.T[0][class_members], feature_source_low.T[1][class_members], s=300, c=color_current, alpha=0.3,
                     marker='*', label='Sclass ' + str(k))
 
-    for k, c2 in zip(range(np.min(result_target_total), np.max(result_target_total)+1), color2):
-        class_members = np.array(result_target_total) == k
+    for k, c2 in zip(range(np.min(result_target_label), np.max(result_target_label)+1), color2):
+        class_members = np.array(result_target_label) == k
         color_current = c2
+        plt.scatter(feature_target_label_low.T[0][class_members], feature_target_label_low.T[1][class_members], s=300, c=color_current, alpha=0.3,
+                    marker='s', label='TLclass ' + str(k))
+
+
+    for k, c3 in zip(range(np.min(result_target_total), np.max(result_target_total)+1), color3):
+        class_members = np.array(result_target_total) == k
+        color_current = c3
         plt.scatter(feature_target_low.T[0][class_members], feature_target_low.T[1][class_members], s=300, c=color_current, alpha=0.5,
                     marker='o', label='Tclass ' + str(k))
 
@@ -747,7 +758,7 @@ def draw_feature_graph(feature_source, feature_target, result_source, result_tar
         plt.show()
 
 
-def log_feature_low(feature_source, feature_target, result_source, result_target_total, result_target_sub, SS, savedir, logname, SS_limit=0.2, use_SS=True):
+def log_feature_low(feature_source, feature_target, result_source, result_target_total, result_target_sub, SS, savedir, logname, SS_limit=0.2, use_SS=True, plot_subclass=False):
     if not os.path.exists(savedir):
         os.makedirs(savedir)
 
@@ -772,6 +783,12 @@ def log_feature_low(feature_source, feature_target, result_source, result_target
     feature_target_low = feature_total_low[source_num[0]
             :source_num[0]+target_num[0]]
 
+    centroid_subclass = []
+    for c in range(0, np.max(result_target_sub)+1):
+        feature_current = feature_target_low[np.where(result_target_sub == c)[0]]
+        centroid_subclass.append(np.mean(feature_current, axis=0))
+    centroid_subclass = np.array(centroid_subclass)
+
     if use_SS:
         SS_limit_index_low = np.where(SS < SS_limit)
         SS_limit_high = SS >= SS_limit
@@ -793,20 +810,30 @@ def log_feature_low(feature_source, feature_target, result_source, result_target
 
     fig = plt.figure()
     # source domain: red
-    plt.plot(feature_source_low_p[:, 0],
-             feature_source_low_p[:, 1], "r^", alpha=0.5)
-    plt.plot(feature_source_low_n[:, 0],
-             feature_source_low_n[:, 1], "ro", alpha=0.5)
+    plt.scatter(feature_source_low_p[:, 0],
+             feature_source_low_p[:, 1], marker="^", c='r', alpha=0.3, s=300)
+    plt.scatter(feature_source_low_n[:, 0],
+             feature_source_low_n[:, 1], marker="o", c='r', alpha=0.3, s=300)
 
+    
     # target domain: blue
     plt.scatter(feature_target_low_p[:, 0],
-                feature_target_low_p[:, 1], marker="^", c='b')
+                feature_target_low_p[:, 1], marker="^", c='b', s=300, alpha=0.3)
     plt.scatter(feature_target_low_n[:, 0],
-                feature_target_low_n[:, 1], marker="o", c='b')
+                feature_target_low_n[:, 1], marker="o", c='b', s=300, alpha=0.3)
 
-    if use_SS:
+    
+
+    if plot_subclass:
         cm = plt.cm.get_cmap('RdYlBu')
-        plt.scatter(feature_target_useless[:, 0], feature_target_useless[:, 1], marker="s", c=subclasses_target, cmap=cm, alpha=0.5)
+        plt.scatter(feature_target_low[:, 0], feature_target_low[:, 1], marker="^", c=result_target_sub, cmap=cm, alpha=0.5, s=150)
+    
+        # subclass centroid
+        plt.scatter(centroid_subclass[:, 0], centroid_subclass[:, 1], marker="*", c='g')
+
+    #if use_SS:
+    #    cm = plt.cm.get_cmap('RdYlBu')
+    #    plt.scatter(feature_target_useless[:, 0], feature_target_useless[:, 1], marker="s", c=subclasses_target, cmap=cm, alpha=0.5)
 
     plt.axis('off')
     plt.savefig(savedir + "feature" + logname + ".png")

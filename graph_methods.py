@@ -243,12 +243,15 @@ def caculate_smoothness(feature_all, label_all, gamma=1.0):
 #        negative_class_result = class_use_graph(caculate_dis_matrix(feature_neg_low, feature_neg_low), k=10)
 
 
-def class_feature_use_graph(feature, pca_dimension=10, k_neighbor=10):
+def class_feature_use_graph(feature, pca_dimension=10, k_neighbor=10, pca=True):
     """
     使用图分类特征
         若feature为[n*256], result为[n]
     """
-    feature_low = pca_via_svd(feature, pca_dimension)
+    if pca:
+        feature_low = pca_via_svd(feature, pca_dimension)
+    else:
+        feature_low = feature
     dis_matrix = caculate_dis_matrix(feature_low, feature_low)
     result = class_use_graph(dis_matrix, k_neighbor)
     return result

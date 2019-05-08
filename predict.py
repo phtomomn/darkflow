@@ -34,9 +34,11 @@ def main():
     gpu_use = 0.0
     model_name = 'crowdNEW-0429'
 
-    #train_yolo[0:4] = 0
-    #label_with_yolo[1:4] = 0
-    #label_hard[0:3] = 0
+    train_yolo[0:5] = 0
+    label_with_yolo[0:5] = 0
+    label_hard[0:5] = 0
+
+    label_hard[0:3] = 1
 
     # --------------------------------------------------------------
     #theta = 0.66853
@@ -45,7 +47,7 @@ def main():
     for i in range(0, run_time):
         mstntrain = 1
 
-        if i == 0:
+        if i <= 0:
             yolomodel = yolo_model_original
             yolomodel_prev = yolo_model_original
         else:
@@ -130,7 +132,7 @@ def main():
             SS_limit=0.5,
             # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
             mstn_train=True*mstntrain,
-            mstn_test=True*mstntrain,
+            mstn_test=True,
             step_log=False,                  # 选择是否计算每20步训练的结果
             add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
             model_name=model_name+'_yolo'+str(int(i)),          # 训练/使用的模型名称

@@ -113,11 +113,13 @@ def MakeLabel(positive_result, negative_result, result_file):
     [n_count, negative_path, string_n] = negative_result
 
     with open(result_file, 'w') as f:
+        for n_count in range(n_count):
+            f.write(negative_path + string_n + str(n_count) + ".jpg 0\n")
+                
         for p_count in range(p_count):
             f.write(positive_path + string_p + str(p_count) + ".jpg 1\n")
         
-        for n_count in range(n_count):
-            f.write(negative_path + string_n + str(n_count) + ".jpg 0\n")
+        
                     
 
 def main():
