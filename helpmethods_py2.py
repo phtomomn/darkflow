@@ -1,4 +1,7 @@
 # coding=utf-8
+from __future__ import division
+from __future__ import with_statement
+from __future__ import absolute_import
 import datetime
 import os
 import shutil
@@ -13,8 +16,9 @@ import AutoBackground.gt as autoback
 import cv2
 from darkflow.cli import cliHandler
 from darkflow.net.build import TFNet
-from MSTN_MODEL.MSTN_train import mstn_label_with_model, mstn_trainmodel
-from MSTN_MODEL.MSTN_train import mstn_label_with_model_noTL, mstn_trainmodel_noTL
+from MSTN_MODEL.MSTN_train_py2 import mstn_label_with_model, mstn_trainmodel
+from MSTN_MODEL.MSTN_train_py2 import mstn_label_with_model_noTL, mstn_trainmodel_noTL
+from io import open
 
 
 
@@ -26,7 +30,7 @@ def test_with_yolo(
         confidence_limit=0.5, 
         start_number=0
     ):
-    """
+    u"""
     使用yolo模型测试指定数量的图片
     图片名称要求：0填充6位
     结果保存：
@@ -39,33 +43,33 @@ def test_with_yolo(
     """
     predict_result = []
     
-    for i in range(start_number, start_number + picture_number):
-        imgcv = cv2.imread(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg")
+    for i in xrange(start_number, start_number + picture_number):
+        imgcv = cv2.imread(yolo_test_dir + u"image/" + unicode(i).zfill(6) + u".jpg")
         img_shape = imgcv.shape[0:2]
         result = yolomodel.return_predict(imgcv)
         person_cnt = 0
         box_number = len(result)
-        for j in range(box_number):
+        for j in xrange(box_number):
             current_box = result[j]
-            if current_box['label'] == 'person':
-                topleft = current_box['topleft']
-                bottomright = current_box['bottomright']
-                confidence = current_box['confidence']
+            if current_box[u'label'] == u'person':
+                topleft = current_box[u'topleft']
+                bottomright = current_box[u'bottomright']
+                confidence = current_box[u'confidence']
 
-                if bottomright['x'] - topleft['x'] >= 0.4*img_shape[1] or bottomright['y'] - topleft['y'] >= 0.4*img_shape[0]:
+                if bottomright[u'x'] - topleft[u'x'] >= 0.4*img_shape[1] or bottomright[u'y'] - topleft[u'y'] >= 0.4*img_shape[0]:
                     continue
                 
                 if confidence >= confidence_limit:
-                    predict_result.append([i, j, topleft['x'], topleft['y'], bottomright['x'], bottomright['y'], confidence])
+                    predict_result.append([i, j, topleft[u'x'], topleft[u'y'], bottomright[u'x'], bottomright[u'y'], confidence])
                     person_cnt += 1
         
         
-        print('detecting {}/{} Done. {} boxes found.'.format(str(i-start_number+1), str(picture_number), str(person_cnt)), end='\r')
+        print u'detecting {}/{} Done. {} boxes found.'.format(unicode(i-start_number+1), unicode(picture_number), unicode(person_cnt)),; sys.stdout.write(u'\r')
         
     
-    print('\nAll pictures are detected done.')
+    print u'\nAll pictures are detected done.'
 
-    np.savetxt(yolo_result_dir+'predict_result.txt', np.array(predict_result))
+    np.savetxt(yolo_result_dir+u'predict_result.txt', np.array(predict_result))
 
 
 
@@ -78,7 +82,7 @@ def save_predict_picture_with_box(
         start_number=0,
         show_confidence=True
     ):
-    """
+    u"""
     根据yolo预测结果在原图上加box，并保存
     """
     if not os.path.exists(yolo_predict_whole_pic_dir):
@@ -86,12 +90,12 @@ def save_predict_picture_with_box(
 
     predict_result = np.loadtxt(result_file)
 
-    for i in range(start_number, start_number + picture_number):
+    for i in xrange(start_number, start_number + picture_number):
         current_predict = predict_result[np.where(predict_result.T[0]==i)]
         box_number = current_predict.shape[0]
 
-        img = cv2.imread(img_dir +str(i).zfill(6) + ".jpg")
-        for j in range(box_number):
+        img = cv2.imread(img_dir +unicode(i).zfill(6) + u".jpg")
+        for j in xrange(box_number):
             current_box_and_confidence = current_predict[j]
             current_box = current_box_and_confidence[2:6].astype(np.int32)
 
@@ -100,37 +104,37 @@ def save_predict_picture_with_box(
                 if confidence >= confidence_limit[1]:
                     cv2.rectangle(
                         img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
-                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                    cv2.putText(img, unicode(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
-                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                    cv2.putText(img, unicode(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
                 
                 elif confidence >= confidence_limit[0]:
                     cv2.rectangle(
                         img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 224, 18), 8)
-                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                    cv2.putText(img, unicode(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 5)
-                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                    cv2.putText(img, unicode(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
 
                 else:
                     cv2.rectangle(
                         img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (255, 0, 0), 5)
-                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                    cv2.putText(img, unicode(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (128, 128, 128), 5)
-                    cv2.putText(img, str(round(confidence, 2)), (current_box[0], max(
+                    cv2.putText(img, unicode(round(confidence, 2)), (current_box[0], max(
                         current_box[1]-10, 0)), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 0), 3)
             
             else:
                 cv2.rectangle(img, (current_box[0], current_box[1]), (current_box[2], current_box[3]), (0, 255, 0), 8)
 
-        cv2.imwrite(yolo_predict_whole_pic_dir + str(i).zfill(6) + ".jpg", img)
+        cv2.imwrite(yolo_predict_whole_pic_dir + unicode(i).zfill(6) + u".jpg", img)
 
         
-        print('saving whole image {}/{}...'.format(str(i-start_number+1), str(picture_number)), end='\r')
+        print u'saving whole image {}/{}...'.format(unicode(i-start_number+1), unicode(picture_number)),; sys.stdout.write(u'\r')
         
 
-    print("\n{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir))
+    print u"\n{} Pictures with boxes are saved at {}".format(datetime.datetime.now(), yolo_predict_whole_pic_dir)
 
 
 
@@ -143,7 +147,7 @@ def save_class_predict_box_sub_picture(
         high_limit=0.5, 
         save=True
     ):
-    """
+    u"""
     根据yolo预测结果与两个阈值，取出hard样本对应box，并另存为新图片。
     并将预测结果中的图片数量写入picture_numbers.txt，同时保存适合于mstn模型训练的标签picture_labels.txt
     返回值：
@@ -156,14 +160,14 @@ def save_class_predict_box_sub_picture(
         if not os.path.exists(yolo_result_dir):
             os.makedirs(yolo_result_dir)
 
-        if not os.path.exists(yolo_result_dir + "hard/"):
-            os.makedirs(yolo_result_dir + "hard/")
+        if not os.path.exists(yolo_result_dir + u"hard/"):
+            os.makedirs(yolo_result_dir + u"hard/")
 
-        if not os.path.exists(yolo_result_dir + "positive/"):
-            os.makedirs(yolo_result_dir + "positive/")
+        if not os.path.exists(yolo_result_dir + u"positive/"):
+            os.makedirs(yolo_result_dir + u"positive/")
 
-        if not os.path.exists(yolo_result_dir + "negative/"):
-            os.makedirs(yolo_result_dir + "negative/")
+        if not os.path.exists(yolo_result_dir + u"negative/"):
+            os.makedirs(yolo_result_dir + u"negative/")
 
     predict_box_hard_list = []
     file_name_list_hard = []
@@ -175,17 +179,17 @@ def save_class_predict_box_sub_picture(
 
     cnt = 0
 
-    for _ in range(start_number + picture_number):
+    for _ in xrange(start_number + picture_number):
         predict_box_hard_list.append([])
 
-    predict_result = np.loadtxt(yolo_result_dir+'predict_result.txt')
-    for i in range(start_number, start_number + picture_number):
+    predict_result = np.loadtxt(yolo_result_dir+u'predict_result.txt')
+    for i in xrange(start_number, start_number + picture_number):
         current_predict = predict_result[np.where(predict_result.T[0]==i)]
         box_number = current_predict.shape[0]
 
-        with Image.open(yolo_test_dir + "image/" + str(i).zfill(6) + ".jpg") as img:
-            for j in range(box_number):
-                print('saving box {}/{} in image {}/{}'.format(str(j+1), str(box_number+1), str(i-start_number+1), str(picture_number)), end='\r')
+        with Image.open(yolo_test_dir + u"image/" + unicode(i).zfill(6) + u".jpg") as img:
+            for j in xrange(box_number):
+                print u'saving box {}/{} in image {}/{}'.format(unicode(j+1), unicode(box_number+1), unicode(i-start_number+1), unicode(picture_number)),; sys.stdout.write(u'\r')
                 
                 current_box_and_confidence = current_predict[j]
                 current_box = current_box_and_confidence[2:6]
@@ -198,163 +202,163 @@ def save_class_predict_box_sub_picture(
                     if save:
                         img_temp = img.crop(current_box)
                         img_temp.save(yolo_result_dir +
-                                    "negative/" + "n" + str(box_count_n) + ".jpg")
+                                    u"negative/" + u"n" + unicode(box_count_n) + u".jpg")
                     box_count_n += 1
 
                 if confidence >= low_limit and confidence <= high_limit:
                     predict_box_hard_list[i].append(current_box_and_confidence)
                     if save:
                         img_temp = img.crop(current_box)
-                        img_temp.save(yolo_result_dir + "hard/" + "h" +
-                                    str(box_count_h) + ".jpg")
+                        img_temp.save(yolo_result_dir + u"hard/" + u"h" +
+                                    unicode(box_count_h) + u".jpg")
 
-                    file_name_list_hard.append(yolo_result_dir + "hard/" + "h" +
-                                    str(box_count_h) + ".jpg "+ str(i).zfill(6)+'.jpg' + '\n')
+                    file_name_list_hard.append(yolo_result_dir + u"hard/" + u"h" +
+                                    unicode(box_count_h) + u".jpg "+ unicode(i).zfill(6)+u'.jpg' + u'\n')
                     box_count_h += 1
 
                 if confidence > high_limit:
                     if save:
                         img_temp = img.crop(current_box)
-                        img_temp.save(yolo_result_dir + "positive/" + "p" +
-                                    str(box_count_p) + ".jpg")
+                        img_temp.save(yolo_result_dir + u"positive/" + u"p" +
+                                    unicode(box_count_p) + u".jpg")
                    
-                    file_name_list_pos.append(yolo_result_dir + "positive/" + "p" +
-                                    str(box_count_p) + ".jpg "+ str(i).zfill(6)+'.jpg'+'\n')
+                    file_name_list_pos.append(yolo_result_dir + u"positive/" + u"p" +
+                                    unicode(box_count_p) + u".jpg "+ unicode(i).zfill(6)+u'.jpg'+u'\n')
                     box_count_p += 1
             
                 cnt += 1
             
-    print('\nSaving boxes done.')
+    print u'\nSaving boxes done.'
 
-    with open(yolo_result_dir + "picture_numbers.txt", 'w') as f:
-        f.write(str(box_count_n)+" "+str(box_count_h) +
-                " "+str(box_count_p)+"\n")
-        f.write(str(low_limit)+"\n")
-        f.write(str(high_limit)+"\n")
-        print("{} Number of neg, hard, pos pictures are saved at {}.".format(datetime.datetime.now(), yolo_result_dir + "picture_numbers.txt"))
+    with open(yolo_result_dir + u"picture_numbers.txt", u'w') as f:
+        f.write(unicode(box_count_n)+u" "+unicode(box_count_h) +
+                u" "+unicode(box_count_p)+u"\n")
+        f.write(unicode(low_limit)+u"\n")
+        f.write(unicode(high_limit)+u"\n")
+        print u"{} Number of neg, hard, pos pictures are saved at {}.".format(datetime.datetime.now(), yolo_result_dir + u"picture_numbers.txt")
 
-    with open(yolo_result_dir + "picture_labels.txt", 'w') as f:
-        for i in range(box_count_h):
-            f.write(yolo_result_dir + "hard/" +
-                    "h" + str(i) + ".jpg" + " 1\n")
+    with open(yolo_result_dir + u"picture_labels.txt", u'w') as f:
+        for i in xrange(box_count_h):
+            f.write(yolo_result_dir + u"hard/" +
+                    u"h" + unicode(i) + u".jpg" + u" 1\n")
     
-    with open(yolo_result_dir + "original_path_hard.txt", 'w') as f:
+    with open(yolo_result_dir + u"original_path_hard.txt", u'w') as f:
         f.writelines(file_name_list_hard)
 
-    with open(yolo_result_dir + "original_path_pos.txt", 'w') as f:
+    with open(yolo_result_dir + u"original_path_pos.txt", u'w') as f:
         f.writelines(file_name_list_pos)
 
-    print("{} {} boxes are detected from {} test pictures. They are labeled into:\n\t{} pos samples\n\t{} neg samples\n\t{} hard samples".format(
-        datetime.datetime.now(), str(box_count_h+box_count_n+box_count_p), str(picture_number), str(box_count_p), str(box_count_n), str(box_count_h)))
-    print("and saved into {}.".format(yolo_result_dir))
+    print u"{} {} boxes are detected from {} test pictures. They are labeled into:\n\t{} pos samples\n\t{} neg samples\n\t{} hard samples".format(
+        datetime.datetime.now(), unicode(box_count_h+box_count_n+box_count_p), unicode(picture_number), unicode(box_count_p), unicode(box_count_n), unicode(box_count_h))
+    print u"and saved into {}.".format(yolo_result_dir)
     return predict_box_hard_list
 
 
 def save_labeled_hard_predict_box_sub_picture(yolo_result_dir, mstn_result_dir, hard_predict_box_label):
-    """
+    u"""
     使用hard样本经过mstn模型后得到的label，分类保存正负样本图片，并保存+-样本的数量至hard_label_num.txt
     """
     if not os.path.exists(mstn_result_dir):
         os.makedirs(mstn_result_dir)
 
-    if not os.path.exists(mstn_result_dir + "hard-positive/"):
-        os.makedirs(mstn_result_dir + "hard-positive/")
+    if not os.path.exists(mstn_result_dir + u"hard-positive/"):
+        os.makedirs(mstn_result_dir + u"hard-positive/")
 
-    if not os.path.exists(mstn_result_dir + "hard-negative/"):
-        os.makedirs(mstn_result_dir + "hard-negative/")
+    if not os.path.exists(mstn_result_dir + u"hard-negative/"):
+        os.makedirs(mstn_result_dir + u"hard-negative/")
 
     pos_picture = hard_predict_box_label[1]
     neg_picture = hard_predict_box_label[0]
 
-    for i in range(len(pos_picture)):
+    for i in xrange(len(pos_picture)):
         source_path = yolo_result_dir + \
-            "hard/" + "h" + str(pos_picture[i]) + ".jpg"
+            u"hard/" + u"h" + unicode(pos_picture[i]) + u".jpg"
         target_path = mstn_result_dir + \
-            "hard-positive/" + "hp" + str(i) + ".jpg"
+            u"hard-positive/" + u"hp" + unicode(i) + u".jpg"
         shutil.copyfile(source_path, target_path)
 
-    for i in range(len(neg_picture)):
+    for i in xrange(len(neg_picture)):
         source_path = yolo_result_dir + \
-            "hard/" + "h" + str(neg_picture[i]) + ".jpg"
+            u"hard/" + u"h" + unicode(neg_picture[i]) + u".jpg"
         target_path = mstn_result_dir + \
-            "hard-negative/" + "hn" + str(i) + ".jpg"
+            u"hard-negative/" + u"hn" + unicode(i) + u".jpg"
         shutil.copyfile(source_path, target_path)
 
-    with open(mstn_result_dir + "hard_label_num.txt", 'w') as f:
-        f.write(str(len(neg_picture))+" "+str(len(pos_picture)))
+    with open(mstn_result_dir + u"hard_label_num.txt", u'w') as f:
+        f.write(unicode(len(neg_picture))+u" "+unicode(len(pos_picture)))
 
-    print("{} All {} hard samples are labeled into:\n\t{} pos samples\n\t{} neg samples".format(
-        datetime.datetime.now(), str(len(pos_picture)+len(neg_picture)), str(len(pos_picture)), str(len(neg_picture))))
-    print("and saved into {}.".format(mstn_result_dir + "hard-*/"))
-    print("{} Classed picture numbers are saved at {}.".format(datetime.datetime.now(), mstn_result_dir + "hard_label_num.txt"))
+    print u"{} All {} hard samples are labeled into:\n\t{} pos samples\n\t{} neg samples".format(
+        datetime.datetime.now(), unicode(len(pos_picture)+len(neg_picture)), unicode(len(pos_picture)), unicode(len(neg_picture)))
+    print u"and saved into {}.".format(mstn_result_dir + u"hard-*/")
+    print u"{} Classed picture numbers are saved at {}.".format(datetime.datetime.now(), mstn_result_dir + u"hard_label_num.txt")
 
 
 
 
 def train_yolo_model(
-        filename="predict.py", 
-        model="cfg/yolo_test2.cfg", 
-        weights="bin/yolov2-tiny-voc.weights", 
-        annotation="train/annotation", 
-        dataset="train/image", 
-        learningrate="0.001", 
-        config="./YOLO_MODEL/cfg/",
-        batchsize="64", 
-        epoch="100", 
-        save="200",
-        pb='null',
-        meta='null',
+        filename=u"predict.py", 
+        model=u"cfg/yolo_test2.cfg", 
+        weights=u"bin/yolov2-tiny-voc.weights", 
+        annotation=u"train/annotation", 
+        dataset=u"train/image", 
+        learningrate=u"0.001", 
+        config=u"./YOLO_MODEL/cfg/",
+        batchsize=u"64", 
+        epoch=u"100", 
+        save=u"200",
+        pb=u'null',
+        meta=u'null',
         gpu_use=False
     ):
 
-    if pb == 'null':
+    if pb == u'null':
         configg = filename \
-            + " --model " + model \
-            + " --load " + weights \
-            + " --train" \
-            + " --annotation " + annotation \
-            + " --dataset " + dataset \
-            + " --lr " + learningrate \
-            + " --gpu 0.0" \
-            + " --batch " + batchsize \
-            + " --epoch " + epoch \
-            + " --save " + save \
-            + " --config " + config 
+            + u" --model " + model \
+            + u" --load " + weights \
+            + u" --train" \
+            + u" --annotation " + annotation \
+            + u" --dataset " + dataset \
+            + u" --lr " + learningrate \
+            + u" --gpu 0.0" \
+            + u" --batch " + batchsize \
+            + u" --epoch " + epoch \
+            + u" --save " + save \
+            + u" --config " + config 
     else:
         configg = filename \
-            + " --pbLoad " + pb \
-            + " --metaLoad " + meta \
-            + " --train" \
-            + " --annotation " + annotation \
-            + " --dataset " + dataset \
-            + " --lr " + learningrate \
-            + " --gpu 1.0" \
-            + " --batch " + batchsize \
-            + " --epoch " + epoch \
-            + " --save " + save 
+            + u" --pbLoad " + pb \
+            + u" --metaLoad " + meta \
+            + u" --train" \
+            + u" --annotation " + annotation \
+            + u" --dataset " + dataset \
+            + u" --lr " + learningrate \
+            + u" --gpu 1.0" \
+            + u" --batch " + batchsize \
+            + u" --epoch " + epoch \
+            + u" --save " + save 
     
     if gpu_use > 0:
-        configg += " --gpu 1.0"
+        configg += u" --gpu 1.0"
 
-    argv = configg.split(" ")
+    argv = configg.split(u" ")
     cliHandler(argv)
 
 
 def train_yolo_init(
         DO_NOT_DEL_TRAIN_PIC=True, 
         train_yolo=False, 
-        filename="predict.py", 
-        model="cfg/yolo_test2.cfg", 
-        weights="bin/yolov2-tiny-voc.weights", 
-        annotation="train/annotation", 
-        dataset="train/image", 
-        learningrate="0.001", 
-        batchsize="8", 
-        epoch="100", 
-        save="200",
+        filename=u"predict.py", 
+        model=u"cfg/yolo_test2.cfg", 
+        weights=u"bin/yolov2-tiny-voc.weights", 
+        annotation=u"train/annotation", 
+        dataset=u"train/image", 
+        learningrate=u"0.001", 
+        batchsize=u"8", 
+        epoch=u"100", 
+        save=u"200",
         gpu_use=False
     ):
-    """
+    u"""
     初始化训练文件夹，并按照指定选项训练yolo
     """
     if train_yolo:
@@ -378,17 +382,17 @@ def save_yolo_predict_result(yolo_result_dir, low_limit=0.1, high_limit=0.5):
     predict_box_array_pos = []
     predict_box_array_hard = []
 
-    predict_result = np.loadtxt(yolo_result_dir+'predict_result.txt')
+    predict_result = np.loadtxt(yolo_result_dir+u'predict_result.txt')
     predict_pic_num = (np.max(predict_result.T[0]) - np.min(predict_result.T[0]) + 1).astype(np.int32)
 
-    for pic in range(predict_pic_num):
+    for pic in xrange(predict_pic_num):
         current_predict = predict_result[np.where(predict_result.T[0]==pic)]
         box_number = current_predict.shape[0]
 
         if box_number == 0:
             continue
 
-        for box in range(box_number):
+        for box in xrange(box_number):
             predict_box_array.append([box, pic, current_predict[box][2], current_predict[box][3], current_predict[box][4], current_predict[box][5], current_predict[box][6]])
             if current_predict[box][6] >= low_limit and current_predict[box][6] <= high_limit:
                 predict_box_array_hard.append([box, pic, current_predict[box][2], current_predict[box][3], current_predict[box][4], current_predict[box][5], current_predict[box][6]])
@@ -396,9 +400,9 @@ def save_yolo_predict_result(yolo_result_dir, low_limit=0.1, high_limit=0.5):
             if current_predict[box][6] >= high_limit:
                 predict_box_array_pos.append([box, pic, current_predict[box][2], current_predict[box][3], current_predict[box][4], current_predict[box][5], current_predict[box][6]])
             
-    np.savetxt(yolo_result_dir + "result.txt", np.array(predict_box_array))
-    np.savetxt(yolo_result_dir + "position_hard.txt", np.array(predict_box_array_hard))
-    np.savetxt(yolo_result_dir + "position_pos.txt", np.array(predict_box_array_pos))
+    np.savetxt(yolo_result_dir + u"result.txt", np.array(predict_box_array))
+    np.savetxt(yolo_result_dir + u"position_hard.txt", np.array(predict_box_array_hard))
+    np.savetxt(yolo_result_dir + u"position_pos.txt", np.array(predict_box_array_pos))
 
 
 def label_with_YOLO(
@@ -409,16 +413,16 @@ def label_with_YOLO(
         confidence_limit_high, 
         save_picture_with_box=False, 
         start_number=0,
-        pb="./YOLO_MODEL/built_graph/yolo_test2.pb",
-        meta="./YOLO_MODEL/built_graph/yolo_test2.meta",
-        model='null',
-        load='null',
+        pb=u"./YOLO_MODEL/built_graph/yolo_test2.pb",
+        meta=u"./YOLO_MODEL/built_graph/yolo_test2.meta",
+        model=u'null',
+        load=u'null',
         use_gpu=False,
         label_image=True,
         yolo_limit=0.08,
         already_labeled=False
     ):
-    """
+    u"""
     使用训练好的yolo模型分类测试图片为正、负、hard三类，并将测试结果box储存为新图片
     返回值：
         IoU：每张测试图片的IoU
@@ -428,17 +432,17 @@ def label_with_YOLO(
 
     if already_labeled == False:
         options = {
-            "config": "./YOLO_MODEL/cfg/",
-            "threshold": yolo_limit
+            u"config": u"./YOLO_MODEL/cfg/",
+            u"threshold": yolo_limit
         }
 
-        if model == 'null':
-            options.update({"pbLoad": pb, "metaLoad": meta})
+        if model == u'null':
+            options.update({u"pbLoad": pb, u"metaLoad": meta})
         else:
-            options.update({"model": model, "load": load})
+            options.update({u"model": model, u"load": load})
 
         if use_gpu > 0:
-            options.update({"gpu":use_gpu})
+            options.update({u"gpu":use_gpu})
 
         tfnet = TFNet(options)
         test_with_yolo(
@@ -467,9 +471,9 @@ def label_with_YOLO(
 
     if save_picture_with_box:
         save_predict_picture_with_box(
-            yolo_test_dir + "image/",
-            yolo_result_dir + 'predict_result.txt', 
-            yolo_result_dir + "whole_pic/", 
+            yolo_test_dir + u"image/",
+            yolo_result_dir + u'predict_result.txt', 
+            yolo_result_dir + u"whole_pic/", 
             picture_number, 
             start_number=start_number, 
             confidence_limit=[confidence_limit_low, confidence_limit_high]
@@ -481,14 +485,14 @@ def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, 
         return
 
     gt = autoback.ReadGT(
-        GT_file=yolo_result_dir + "result.txt", 
+        GT_file=yolo_result_dir + u"result.txt", 
         pic_num=pic_num_for_train_MSTN
     )
 
     autoback.MakeMeanBackground(
-        pic_dir=yolo_test_dir + "image/", 
+        pic_dir=yolo_test_dir + u"image/", 
         GT=gt, 
-        result_save_path=MSTN_train_img_dir + "target_backgroung_whole.jpg", 
+        result_save_path=MSTN_train_img_dir + u"target_backgroung_whole.jpg", 
         score_limit=positive_score_limit,
         step=2, 
         log=False,
@@ -497,20 +501,20 @@ def MSTN_train_set_init(yolo_result_dir, yolo_test_dir, pic_num_for_train_MSTN, 
         gt_weight=0.5
     )
 
-    target_pos_result = autoback.MakePositiveSamples_fromResult(yolo_result_dir, string="p")
+    target_pos_result = autoback.MakePositiveSamples_fromResult(yolo_result_dir, string=u"p")
 
     target_neg_result = autoback.CutBackgroundPic(
-        back_pic=MSTN_train_img_dir + "target_backgroung_whole.jpg",
-        result_save_path=MSTN_train_img_dir + "target_background/", 
+        back_pic=MSTN_train_img_dir + u"target_backgroung_whole.jpg",
+        result_save_path=MSTN_train_img_dir + u"target_background/", 
         block_size=[300,150], 
         step_per_block=2,
-        string="n"
+        string=u"n"
     )
 
     autoback.MakeLabel(
         positive_result=target_pos_result,
         negative_result=target_neg_result,
-        result_file=MSTN_train_img_dir + "target_with_label.txt"
+        result_file=MSTN_train_img_dir + u"target_with_label.txt"
     )
 
 
@@ -524,92 +528,92 @@ def MSTN_result_process(mstn_predict_result, score_source, score_target, score_w
 def make_yolo_xml_label(whole_pic_file_name, bwidth, bheight, bdepth, Xmin, Ymin, Xmax, Ymax, box_count, xml_path):
     #with Document() as doc:
     doc = Document()
-    annotation = doc.createElement('annotation')
+    annotation = doc.createElement(u'annotation')
     doc.appendChild(annotation)
 
-    folder = doc.createElement('folder')
-    folder_text = doc.createTextNode("VOC2007")
+    folder = doc.createElement(u'folder')
+    folder_text = doc.createTextNode(u"VOC2007")
     folder.appendChild(folder_text)
     annotation.appendChild(folder)
 
-    filename = doc.createElement('filename')
+    filename = doc.createElement(u'filename')
     filename_str = whole_pic_file_name
     filename_text = doc.createTextNode(filename_str)
     filename.appendChild(filename_text)
     annotation.appendChild(filename)
 
-    size = doc.createElement('size')
+    size = doc.createElement(u'size')
     annotation.appendChild(size)
-    width = doc.createElement('width')
-    width_text = doc.createTextNode(str(bwidth))
+    width = doc.createElement(u'width')
+    width_text = doc.createTextNode(unicode(bwidth))
     width.appendChild(width_text)
     size.appendChild(width)
 
-    height = doc.createElement('height')
-    height_text = doc.createTextNode(str(bheight))
+    height = doc.createElement(u'height')
+    height_text = doc.createTextNode(unicode(bheight))
     height.appendChild(height_text)
     size.appendChild(height)
 
-    depth = doc.createElement('depth')
-    depth_text = doc.createTextNode(str(bdepth))
+    depth = doc.createElement(u'depth')
+    depth_text = doc.createTextNode(unicode(bdepth))
     depth.appendChild(depth_text)
     size.appendChild(depth)
 
-    segmented = doc.createElement('segmented')
-    segmented_text = doc.createTextNode(str(0))
+    segmented = doc.createElement(u'segmented')
+    segmented_text = doc.createTextNode(unicode(0))
     segmented.appendChild(segmented_text)
     annotation.appendChild(segmented)
 
-    for box in range(box_count):
+    for box in xrange(box_count):
             
 
-        object1 = doc.createElement('object')
+        object1 = doc.createElement(u'object')
         annotation.appendChild(object1)
 
-        name = doc.createElement('name')
-        name_text = doc.createTextNode("person")
+        name = doc.createElement(u'name')
+        name_text = doc.createTextNode(u"person")
         name.appendChild(name_text)
         object1.appendChild(name)
 
-        bndbox = doc.createElement('bndbox')
+        bndbox = doc.createElement(u'bndbox')
         object1.appendChild(bndbox)
 
-        xmin = doc.createElement('xmin')
-        xmin_text = doc.createTextNode(str(Xmin[box]))
+        xmin = doc.createElement(u'xmin')
+        xmin_text = doc.createTextNode(unicode(Xmin[box]))
         xmin.appendChild(xmin_text)
         bndbox.appendChild(xmin)
 
-        ymin = doc.createElement('ymin')
-        ymin_text = doc.createTextNode(str(Ymin[box]))
+        ymin = doc.createElement(u'ymin')
+        ymin_text = doc.createTextNode(unicode(Ymin[box]))
         ymin.appendChild(ymin_text)
         bndbox.appendChild(ymin)
 
-        xmax = doc.createElement('xmax')
-        xmax_text = doc.createTextNode(str(Xmax[box]))
+        xmax = doc.createElement(u'xmax')
+        xmax_text = doc.createTextNode(unicode(Xmax[box]))
         xmax.appendChild(xmax_text)
         bndbox.appendChild(xmax)
 
-        ymax = doc.createElement('ymax')
-        ymax_text = doc.createTextNode(str(Ymax[box]))
+        ymax = doc.createElement(u'ymax')
+        ymax_text = doc.createTextNode(unicode(Ymax[box]))
         ymax.appendChild(ymax_text)
         bndbox.appendChild(ymax)
 
-        with open(xml_path, 'w') as f:
-            doc.writexml(f, indent='\t', newl='\n',
-                         addindent='\t', encoding='utf-8')
+        with open(xml_path, u'w') as f:
+            doc.writexml(f, indent=u'\t', newl=u'\n',
+                         addindent=u'\t', encoding=u'utf-8')
 
 
-def hard_and_pos_processing(original_score, hard_result_classify, hard_result_position, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage):
-    final_flag = high_score_image_flage * hard_result_classify.T[0] * (original_score>0.5)
+def hard_and_pos_processing(hard_result_classify, hard_result_position, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage):
+    final_flag = high_score_image_flage * hard_result_classify.T[0]
     final_index = np.where(final_flag)[0]
 
     hard_result_position_f = hard_result_position[final_index]
     #hard_result_path_f = hard_result_path[final_index]
     hard_result_path_f = []
-    for i in range(final_index.shape[0]):
+    for i in xrange(final_index.shape[0]):
         hard_result_path_f.append(hard_result_path[final_index[i]])
 
-    if pos_result_position.shape[0] and pos_result_position.size > 7:
+    if pos_result_position.shape[0]:
         result_position = np.concatenate([hard_result_position_f, pos_result_position], axis=0)
         result_path = hard_result_path_f + pos_result_path
     
@@ -623,7 +627,7 @@ def hard_and_pos_processing(original_score, hard_result_classify, hard_result_po
     result_position_sort = result_position[img_order_sort_index]
     result_path_sort = []
 
-    for i in range(img_order_sort_index.shape[0]):
+    for i in xrange(img_order_sort_index.shape[0]):
         result_path_sort.append(result_path[img_order_sort_index[i]])
 
     return result_position_sort, result_path_sort
@@ -632,12 +636,12 @@ def hard_and_pos_processing(original_score, hard_result_classify, hard_result_po
 
 
 def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight):
-    """
+    u"""
     将从mstn网络输出的hard样本中得到的正样本加入yolo训练集，同时制作yolo训练使用的标签
     """
 
-    hard_result_classify = np.loadtxt(mstn_result_dir + "result+score.txt")
-    hard_result_position = np.loadtxt(yolo_result_dir + "position_hard.txt")
+    hard_result_classify = np.loadtxt(mstn_result_dir + u"result+score.txt")
+    hard_result_position = np.loadtxt(yolo_result_dir + u"position_hard.txt")
     hard_result_position_final = np.column_stack(
         [
             hard_result_position.T[0], 
@@ -649,19 +653,19 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
             hard_result_classify.T[1]+hard_result_classify.T[2],
         ]
     )
-    pos_result_position = np.loadtxt(yolo_result_dir + "position_pos.txt") 
-    original_score = hard_result_classify.T[3]
+    pos_result_position = np.loadtxt(yolo_result_dir + u"position_pos.txt") 
     
-    with open(yolo_result_dir + "original_path_hard.txt", 'r') as f:
+    
+    with open(yolo_result_dir + u"original_path_hard.txt", u'r') as f:
         hard_result_path = f.readlines()
     
-    with open(yolo_result_dir + "original_path_pos.txt", 'r') as f:
+    with open(yolo_result_dir + u"original_path_pos.txt", u'r') as f:
         pos_result_path = f.readlines()
 
-    high_score_image_flage = np.loadtxt(mstn_result_dir + "high_score_index.txt")
+    high_score_image_flage = np.loadtxt(mstn_result_dir + u"high_score_index.txt")
 
-    final_position, final_path = hard_and_pos_processing(original_score, hard_result_classify, hard_result_position_final, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
-    np.savetxt(yolo_train_dir + 'labels.txt', np.column_stack(
+    final_position, final_path = hard_and_pos_processing(hard_result_classify, hard_result_position_final, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
+    np.savetxt(yolo_train_dir + u'labels.txt', np.column_stack(
         [
             hard_result_position.T[1], 
             hard_result_position.T[0], 
@@ -673,8 +677,8 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
         ]
     ))
 
-    xml_save_dir = yolo_train_dir + "annotation/"
-    train_picture_dir = yolo_train_dir + "image/"
+    xml_save_dir = yolo_train_dir + u"annotation/"
+    train_picture_dir = yolo_train_dir + u"image/"
 
     if not os.path.exists(xml_save_dir):
         os.makedirs(xml_save_dir)
@@ -682,28 +686,28 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
         os.makedirs(train_picture_dir)
 
     box_count = 0
-    for pic in range(0, np.max(final_position.T[1]).astype(np.int32)+1):
-        print('labeling {}/{}...'.format(str(pic+1), str( np.max(final_position.T[1]).astype(np.int32)+1)), end='\r')
+    for pic in xrange(0, np.max(final_position.T[1]).astype(np.int32)+1):
+        print u'labeling {}/{}...'.format(unicode(pic+1), unicode( np.max(final_position.T[1]).astype(np.int32)+1)),; sys.stdout.write(u'\r')
         current_pic_index = np.where(final_position.T[1] == pic)[0]
 
         if current_pic_index.shape[0] == 0:
             continue
         
-        current_img = cv2.imread(mstn_train_img_dir + "target_backgroung_whole.jpg")
+        current_img = cv2.imread(mstn_train_img_dir + u"target_backgroung_whole.jpg")
         current_position = final_position[current_pic_index]
-        for box in range(current_position.shape[0]):
+        for box in xrange(current_position.shape[0]):
             current_box_position = current_position[box][2:6].astype(np.int32)
-            current_box_path = final_path[box_count].split('\n')[0]
-            current_box = cv2.imread(current_box_path.split(' ')[0])
+            current_box_path = final_path[box_count].split(u'\n')[0]
+            current_box = cv2.imread(current_box_path.split(u' ')[0])
             [X, Y] = current_box.shape[0:2]
             current_img[current_box_position[1]:current_box_position[3], current_box_position[0]:current_box_position[2], :] = current_box
             box_count += 1
         
-        current_pic_name = str(pic).zfill(6) + ".jpg"
+        current_pic_name = unicode(pic).zfill(6) + u".jpg"
         cv2.imwrite(train_picture_dir + current_pic_name, current_img)
 
         [bheight, bwidth, bdepth] = current_img.shape
-        current_xml_name = str(pic).zfill(6) + ".xml"
+        current_xml_name = unicode(pic).zfill(6) + u".xml"
         Xmin = final_position[current_pic_index, 2]
         Ymin = final_position[current_pic_index, 3]
         Xmax = final_position[current_pic_index, 4]
@@ -727,12 +731,12 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
 def caculate_theta(theta0, beta, nu, result, original_score, ss0, ss1, ss_weight):
     ss = ss0*ss_weight[0] + ss1*ss_weight[1]
-    result_bool = np.sign((result == 1) - 0.5)
+    result_bool = result == 1
     delta = original_score - beta
     ss = ss/np.max(ss)
     zeta = np.sum(delta * result_bool * ss) / np.sum(np.abs(delta))
     theta = 1 - nu * zeta
-    return np.minimum(theta0, theta)
+    return theta
 
 
 def class_low_result_into_subclasses():
@@ -754,24 +758,24 @@ def label_hard_pic_with_MSTN(
         mstn_test=False,
         add_to_trainset=True, 
         step_log=True, 
-        model_name='mstn', 
+        model_name=u'mstn', 
         train_epoch=400, 
         SS_limit=0.2,
         label_hard_image=True
     ):
-    """
+    u"""
     使用MSTN模型训练分类hard样本，并将分类好的正样本加入yolo训练集中并分别制作标签
     """  
     if not label_hard_image:
         return
     
-    with open(yolo_result_dir + "picture_numbers.txt", 'r') as f:
-        number_list = f.readline().split(" ")
+    with open(yolo_result_dir + u"picture_numbers.txt", u'r') as f:
+        number_list = f.readline().split(u" ")
         neg_box_number = int(number_list[0])
         hard_box_number = int(number_list[1])
         pos_box_number = int(number_list[2])
     
-    print("{} Start classify {} hard samples.".format(datetime.datetime.now(), str(hard_box_number)))
+    print u"{} Start classify {} hard samples.".format(datetime.datetime.now(), unicode(hard_box_number))
 
     training_img_number = min(hard_box_number, 200)
     val_img_number = hard_box_number
@@ -799,35 +803,36 @@ def label_hard_pic_with_MSTN(
             train_epoch=train_epoch
         )
 
-        original_hard_score = np.loadtxt(yolo_result_dir+'position_hard.txt')
+        original_hard_score = np.loadtxt(yolo_result_dir+u'position_hard.txt')
         log_array = np.column_stack([result_total, SS[0], SS[1], original_hard_score.T[6], result_sub])
-        np.savetxt(mstn_result_dir + "result+score.txt", log_array)
+        np.savetxt(mstn_result_dir + u"result+score.txt", log_array)
 
 
         
 
-        print("Hard samples are classified.")
+        print u"Hard samples are classified."
     
     if add_to_trainset:
-        res = np.loadtxt(mstn_result_dir + "result+score.txt")
+        res = np.loadtxt(mstn_result_dir + u"result+score.txt")
         high_score_image_flage, low_score_image_flage = MSTN_result_process(res.T[0], res.T[1], res.T[2], score_weight=[1.0, 3.0], score_threshold=0.8)
-        np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
-        np.savetxt(mstn_result_dir + "low_score_index.txt", low_score_image_flage)
+        np.savetxt(mstn_result_dir + u"high_score_index.txt", high_score_image_flage)
+        np.savetxt(mstn_result_dir + u"low_score_index.txt", low_score_image_flage)
 
-        theta_new = caculate_theta(theta, beta, nu=0.95, result=res.T[0], original_score=res.T[3], ss0=res.T[1], ss1=res.T[2], ss_weight=[1.0, 3.0])
-        print(theta_new)
+        theta_new = caculate_theta(theta, beta, nu=0.75, result=res.T[0], original_score=res.T[3], ss0=res.T[1], ss1=res.T[2], ss_weight=[1.0, 3.0])
+        print theta_new
 
+        return theta_new
         final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight=[1.0, 3.0])
         picture_number = (np.max(final_position.T[1]) - np.min(final_position.T[1]) + 1).astype(np.int32)
         save_predict_picture_with_box(
-            yolo_test_dir + 'image/',
-            yolo_train_dir + 'labels.txt',
-            yolo_train_dir + 'hard_results_whole_image/',
+            yolo_test_dir + u'image/',
+            yolo_train_dir + u'labels.txt',
+            yolo_train_dir + u'hard_results_whole_image/',
             picture_number=picture_number,
             start_number=np.min(final_position.T[0]).astype(np.int32),
             confidence_limit=[0, 0.8]
         )
-        print("Classified hard samples and their labels are add to yolo train set.")
+        print u"Classified hard samples and their labels are add to yolo train set."
     
     return theta_new
 
@@ -843,20 +848,20 @@ def label_hard_pic_with_MSTN_noTL(
         mstn_train=False, 
         add_to_trainset=True, 
         step_log=True, 
-        model_name='mstn', 
+        model_name=u'mstn', 
         train_epoch=400, 
         SS_limit=0.2,
         label_hard_image=True
     ):
-    """
+    u"""
     使用MSTN模型训练分类hard样本，并将分类好的正样本加入yolo训练集中并分别制作标签
     **不使用目标域有标签样本，仅供测试使用！**
     """  
     if not label_hard_image:
         return
     
-    with open(yolo_result_dir + "picture_numbers.txt", 'r') as f:
-        number_list = f.readline().split(" ")
+    with open(yolo_result_dir + u"picture_numbers.txt", u'r') as f:
+        number_list = f.readline().split(u" ")
         neg_box_number = int(number_list[0])
         hard_box_number = int(number_list[1])
         pos_box_number = int(number_list[2])
@@ -876,7 +881,7 @@ def label_hard_pic_with_MSTN_noTL(
         )
    
     result_total, SS = mstn_label_with_model_noTL(
-        MODEL_PATH="./MSTN_MODEL/trained_models/" + model_name + str(train_epoch) + ".ckpt", 
+        MODEL_PATH=u"./MSTN_MODEL/trained_models/" + model_name + unicode(train_epoch) + u".ckpt", 
         TRAINING_FILE=mstn_source_train_label, 
         VAL_FILE=mstn_target_test_file, 
         val_file_num=val_img_number,
@@ -891,7 +896,7 @@ def label_hard_pic_with_MSTN_noTL(
     #high_score_image_flage = MSTN_result_process(result_total, SS, score_weight=[1.0, 1.0], score_threshold=0.4)
     #np.savetxt(mstn_result_dir + "high_score_index.txt", high_score_image_flage)
 
-    print("Hard samples are classified.")
+    print u"Hard samples are classified."
 
     #if add_to_trainset:
     #    make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir)
@@ -901,31 +906,31 @@ def label_hard_pic_with_MSTN_noTL(
 
 
 def model_summary(mstn_result_dir, yolo_result_dir, yolo_test_dir):
-    print("{} Summary of model:".format(datetime.datetime.now()))
+    print u"{} Summary of model:".format(datetime.datetime.now())
 
-    with open(yolo_test_dir + "box_number.txt", 'r') as f:
+    with open(yolo_test_dir + u"box_number.txt", u'r') as f:
         total_box_number = int(f.readline())
 
-    with open(yolo_result_dir + "picture_numbers.txt", 'r') as f:
-        number_list = f.readline().split(" ")
+    with open(yolo_result_dir + u"picture_numbers.txt", u'r') as f:
+        number_list = f.readline().split(u" ")
         neg_box_number = int(number_list[0])
         hard_box_number = int(number_list[1])
         pos_box_number = int(number_list[2])
         clow = float(f.readline())
         chigh = float(f.readline())
     
-    print("\tYOLO model:")
-    print("\t\ttotal person box: {}".format(str(total_box_number)))
-    print("\t\tnegetive box: {}".format(str(neg_box_number)))
-    print("\t\thard box: {}".format(str(hard_box_number)))
-    print("\t\tpositive box: {}".format(str(pos_box_number)))
+    print u"\tYOLO model:"
+    print u"\t\ttotal person box: {}".format(unicode(total_box_number))
+    print u"\t\tnegetive box: {}".format(unicode(neg_box_number))
+    print u"\t\thard box: {}".format(unicode(hard_box_number))
+    print u"\t\tpositive box: {}".format(unicode(pos_box_number))
     
-    with open(mstn_result_dir + "hard_label_num.txt", 'r') as f:
-        number_list = f.readline().split(" ")
+    with open(mstn_result_dir + u"hard_label_num.txt", u'r') as f:
+        number_list = f.readline().split(u" ")
         hard_neg_box_number = int(number_list[0])
         hard_pos_box_number = int(number_list[1])
 
-    print("\tMSTN model:")
-    print("\t\ttotal hard box: {}".format(str(hard_box_number)))
-    print("\t\tnegetive-hard box: {}".format(str(hard_neg_box_number)))
-    print("\t\tpositive-hard box: {}".format(str(hard_pos_box_number)))
+    print u"\tMSTN model:"
+    print u"\t\ttotal hard box: {}".format(unicode(hard_box_number))
+    print u"\t\tnegetive-hard box: {}".format(unicode(hard_neg_box_number))
+    print u"\t\tpositive-hard box: {}".format(unicode(hard_pos_box_number))

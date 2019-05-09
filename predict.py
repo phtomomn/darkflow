@@ -20,32 +20,31 @@ def main():
 
     # ------------------config training parameters------------------
     #train_yolo_picture_number = 436
-    test_yolo_picture_number = 436
+    test_yolo_picture_number = 871
     test_pictuce_start_number = 0
 
-    beta = 0.0
-    theta0 = 0.8
+    beta = 0.5
+    theta0 = 0.6
     run_time = 5
-    mstn_train_step_range = [500, 1500]
+    mstn_train_step_range = [500, 1000]
 
-    train_yolo = np.ones([run_time], dtype=np.int)
-    label_with_yolo = np.ones([run_time], dtype=np.int)
-    label_hard = np.ones([run_time], dtype=np.int)
-    gpu_use = 0.0
-    model_name = 'crowdNEW-0429'
+    train_yolo = np.zeros([run_time], dtype=np.int)
+    label_with_yolo = np.zeros([run_time], dtype=np.int)
+    label_hard = np.zeros([run_time], dtype=np.int)
+    mstntrain = np.zeros([run_time], dtype=np.int)
+    gpu_use = 1.0
+    #model_name = 'crowdNEW-0429'
+    model_name = 'lot2-871-0508'
 
-    train_yolo[0:5] = 0
-    label_with_yolo[0:5] = 0
-    label_hard[0:5] = 0
+    train_yolo[0:5] = 1
+    label_with_yolo[0:5] = 1
+    label_hard[0:5] = 1
+    mstntrain[0:5] = 1
 
-    label_hard[0:3] = 1
-
+    #$theta = 5.258045146501422185e-01
+    #yolomodel = -1
     # --------------------------------------------------------------
-    #theta = 0.66853
-    #theta = 0.5010323868913487
-    #theta = 1.473481240236558243e-01
     for i in range(0, run_time):
-        mstntrain = 1
 
         if i <= 0:
             yolomodel = yolo_model_original
@@ -63,8 +62,9 @@ def main():
         else:
             mstn_train_step = mstn_train_step_range[1]
 
-        clow = 0.2
-        chigh = beta + theta
+        if not theta is None:
+            clow = beta - theta/2
+            chigh = beta + theta/2
 
         yolo_result_dir = yolo_result_dir_base + model_name + str(i) + '/'
         yolo_train_dir = yolo_train_dir_original + model_name + str(i) + '/'
@@ -86,7 +86,7 @@ def main():
             dataset=yolo_train_dir_prev + "image",
             learningrate="0.000005",
             batchsize="1",
-            epoch="3",
+            epoch="5",
             save="250",
             train_yolo=train_yolo[i]*i,
             gpu_use=gpu_use,
@@ -113,9 +113,9 @@ def main():
             yolo_result_dir=yolo_result_dir,
             yolo_test_dir=yolo_test_dir,
             MSTN_train_img_dir=mstn_train_img_dir,
-            pic_num_for_train_MSTN=test_yolo_picture_number,    # 背景建模使用的视频帧数量
+            pic_num_for_train_MSTN=test_yolo_picture_number//2,    # 背景建模使用的视频帧数量
             positive_score_limit=0.2,                           # 背景建模中的检测结果得分阈值
-            background_modeling=label_hard[i]*0
+            background_modeling=label_hard[i]*mstntrain[i]
         )
 
         theta = label_hard_pic_with_MSTN(
@@ -131,7 +131,7 @@ def main():
             mstn_target_train_label,
             SS_limit=0.5,
             # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
-            mstn_train=True*mstntrain,
+            mstn_train=True*mstntrain[i],
             mstn_test=True,
             step_log=False,                  # 选择是否计算每20步训练的结果
             add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
@@ -141,7 +141,8 @@ def main():
         )
 
         t = np.ones([1], dtype=np.float)
-        np.savetxt('./theta'+str(i)+'.txt', t*theta)
+        if not theta is None:
+            np.savetxt('./theta'+model_name+str(i)+'.txt', t*theta)
 
 
 def dir_init(dir):
