@@ -2,11 +2,22 @@
 from helpmethods import *
 import numpy as np
 import sys
-import os
+import os 
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID" 
+os.environ["CUDA_VISIBLE_DEVICES"]="3" 
 
 
 def main():
-    yolo_test_dir = "./YOLO_MODEL/yolo_test/"  # 测试换图片集更改此处
+    if len(sys.argv) == 1:
+        yolo_test_dir = "./YOLO_MODEL/yolo_test/"  # 测试换图片集更改此处
+        test_yolo_picture_number = 436
+        model_name = 'crowd-201907'
+    
+    else:
+        yolo_test_dir = sys.argv[1]
+        test_yolo_picture_number = sys.argv[2]
+        model_name = sys.argv[3]
+
     yolo_train_dir_original = "./YOLO_MODEL/yolo_train/"
     yolo_result_dir_base = "./YOLO_MODEL/yolo_result/"
 
@@ -18,9 +29,6 @@ def main():
     mstn_source_train_label = "./MSTN_MODEL/MSTN_train_images/source.txt"
     mstn_target_train_label = "./MSTN_MODEL/MSTN_train_images/target_with_label.txt"
 
-    # ------------------config training parameters------------------
-    #train_yolo_picture_number = 436
-    test_yolo_picture_number = 871
     test_pictuce_start_number = 0
 
     beta = 0.5
@@ -33,16 +41,14 @@ def main():
     label_hard = np.zeros([run_time], dtype=np.int)
     mstntrain = np.zeros([run_time], dtype=np.int)
     gpu_use = 1.0
-    #model_name = 'crowdNEW-0429'
-    model_name = 'lot2-871-0508'
+
+    
 
     train_yolo[0:5] = 1
     label_with_yolo[0:5] = 1
     label_hard[0:5] = 1
     mstntrain[0:5] = 1
 
-    #$theta = 5.258045146501422185e-01
-    #yolomodel = -1
     # --------------------------------------------------------------
     for i in range(0, run_time):
 
@@ -133,7 +139,7 @@ def main():
             # 选择是否训练困难样本分类器，若为False则直接使用/MSTN_MODEL/trained_models/中的现有权重
             mstn_train=True*mstntrain[i],
             mstn_test=True,
-            step_log=False,                  # 选择是否计算每20步训练的结果
+            step_log=True,                  # 选择是否计算每20步训练的结果
             add_to_trainset=True,          # 选择是否将分类结果制作为yolo训练图片
             model_name=model_name+'_yolo'+str(int(i)),          # 训练/使用的模型名称
             train_epoch=mstn_train_step,                  # 训练迭代次数（四个数据集均在500左右较为合适）

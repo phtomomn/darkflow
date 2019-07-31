@@ -1,4 +1,4 @@
-import tensorflow.contrib.slim as slim
+#import tensorflow.contrib.slim as slim
 from .baseop import BaseOp
 import tensorflow as tf
 from distutils.version import StrictVersion
@@ -57,7 +57,7 @@ class flatten(BaseOp):
 	def forward(self):
 		temp = tf.transpose(
 			self.inp.out, [0,3,1,2])
-		self.out = slim.flatten(
+		self.out = tf.contrib.slim.flatten(
 			temp, scope = self.scope)
 
 	def speak(self): return 'flat'

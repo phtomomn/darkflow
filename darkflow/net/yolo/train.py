@@ -1,4 +1,4 @@
-import tensorflow.contrib.slim as slim
+#import tensorflow.contrib.slim as slim
 import pickle
 import tensorflow as tf
 from .misc import show
@@ -74,12 +74,12 @@ def loss(self, net_out):
     proid = sprob * _proid
 
     # flatten 'em all
-    probs = slim.flatten(_probs)
-    proid = slim.flatten(proid)
-    confs = slim.flatten(confs)
-    conid = slim.flatten(conid)
-    coord = slim.flatten(_coord)
-    cooid = slim.flatten(cooid)
+    probs = tf.contrib.slim.flatten(_probs)
+    proid = tf.contrib.slim.flatten(proid)
+    confs = tf.contrib.slim.flatten(confs)
+    conid = tf.contrib.slim.flatten(conid)
+    coord = tf.contrib.slim.flatten(_coord)
+    cooid = tf.contrib.slim.flatten(cooid)
 
     self.fetch += [probs, confs, conid, cooid, proid]
     true = tf.concat([probs, confs, coord], 1)

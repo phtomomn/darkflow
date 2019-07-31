@@ -1,4 +1,4 @@
-import tensorflow.contrib.slim as slim
+#import tensorflow.contrib.slim as slim
 from .baseop import BaseOp
 import tensorflow as tf
 import numpy as np
@@ -87,7 +87,7 @@ class convolutional(BaseOp):
                 'is_training': layer.h['is_training'],
                 'param_initializers': layer.w
                 })
-            return slim.batch_norm(inp, **args)
+            return tf.contrib.slim.batch_norm(inp, **args)
 
     def speak(self):
         l = self.lay

@@ -16,8 +16,8 @@ import AutoBackground.gt as autoback
 import cv2
 from darkflow.cli import cliHandler
 from darkflow.net.build import TFNet
-from MSTN_MODEL.MSTN_train_py2 import mstn_label_with_model, mstn_trainmodel
-from MSTN_MODEL.MSTN_train_py2 import mstn_label_with_model_noTL, mstn_trainmodel_noTL
+from MSTN_MODEL.MSTN_train import mstn_label_with_model, mstn_trainmodel
+from MSTN_MODEL.MSTN_train import mstn_label_with_model_noTL, mstn_trainmodel_noTL
 from io import open
 
 
@@ -419,7 +419,7 @@ def label_with_YOLO(
         load=u'null',
         use_gpu=False,
         label_image=True,
-        yolo_limit=0.08,
+        yolo_limit=0.01,
         already_labeled=False
     ):
     u"""
@@ -603,8 +603,8 @@ def make_yolo_xml_label(whole_pic_file_name, bwidth, bheight, bdepth, Xmin, Ymin
                          addindent=u'\t', encoding=u'utf-8')
 
 
-def hard_and_pos_processing(hard_result_classify, hard_result_position, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage):
-    final_flag = high_score_image_flage * hard_result_classify.T[0]
+def hard_and_pos_processing(original_score, hard_result_classify, hard_result_position, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage):
+    final_flag = high_score_image_flage * hard_result_classify.T[0] * (original_score>0.5)
     final_index = np.where(final_flag)[0]
 
     hard_result_position_f = hard_result_position[final_index]
@@ -613,7 +613,7 @@ def hard_and_pos_processing(hard_result_classify, hard_result_position, hard_res
     for i in xrange(final_index.shape[0]):
         hard_result_path_f.append(hard_result_path[final_index[i]])
 
-    if pos_result_position.shape[0]:
+    if pos_result_position.shape[0] and pos_result_position.size > 7:
         result_position = np.concatenate([hard_result_position_f, pos_result_position], axis=0)
         result_path = hard_result_path_f + pos_result_path
     
@@ -654,7 +654,7 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
         ]
     )
     pos_result_position = np.loadtxt(yolo_result_dir + u"position_pos.txt") 
-    
+    original_score = hard_result_classify.T[3]
     
     with open(yolo_result_dir + u"original_path_hard.txt", u'r') as f:
         hard_result_path = f.readlines()
@@ -664,7 +664,7 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
     high_score_image_flage = np.loadtxt(mstn_result_dir + u"high_score_index.txt")
 
-    final_position, final_path = hard_and_pos_processing(hard_result_classify, hard_result_position_final, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
+    final_position, final_path = hard_and_pos_processing(original_score, hard_result_classify, hard_result_position_final, hard_result_path, pos_result_position, pos_result_path, high_score_image_flage)
     np.savetxt(yolo_train_dir + u'labels.txt', np.column_stack(
         [
             hard_result_position.T[1], 
@@ -731,12 +731,12 @@ def make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_
 
 def caculate_theta(theta0, beta, nu, result, original_score, ss0, ss1, ss_weight):
     ss = ss0*ss_weight[0] + ss1*ss_weight[1]
-    result_bool = result == 1
+    result_bool = np.sign((result == 1) - 0.5)
     delta = original_score - beta
     ss = ss/np.max(ss)
     zeta = np.sum(delta * result_bool * ss) / np.sum(np.abs(delta))
     theta = 1 - nu * zeta
-    return theta
+    return np.minimum(theta0, theta)
 
 
 def class_low_result_into_subclasses():
@@ -818,10 +818,9 @@ def label_hard_pic_with_MSTN(
         np.savetxt(mstn_result_dir + u"high_score_index.txt", high_score_image_flage)
         np.savetxt(mstn_result_dir + u"low_score_index.txt", low_score_image_flage)
 
-        theta_new = caculate_theta(theta, beta, nu=0.75, result=res.T[0], original_score=res.T[3], ss0=res.T[1], ss1=res.T[2], ss_weight=[1.0, 3.0])
+        theta_new = caculate_theta(theta, beta, nu=0.95, result=res.T[0], original_score=res.T[3], ss0=res.T[1], ss1=res.T[2], ss_weight=[1.0, 3.0])
         print theta_new
 
-        return theta_new
         final_position = make_label_new_postive_sub_pic(mstn_result_dir, yolo_train_dir, yolo_result_dir, mstn_train_img_dir, score_weight=[1.0, 3.0])
         picture_number = (np.max(final_position.T[1]) - np.min(final_position.T[1]) + 1).astype(np.int32)
         save_predict_picture_with_box(

@@ -1,6 +1,7 @@
 # coding=utf-8
 import tensorflow as tf
 import numpy as np
+import sys
 
 
 """
@@ -267,13 +268,15 @@ def class_target_result_with_source_centroid(target_feature, target_result, sour
         return i <= target_class_num
 
     def loop_body(target_feature, target_result, source_centroid, final_result, i, target_class_num):
-        feature_current = tf.gather_nd(params=target_feature, indices=tf.where(tf.equal(target_result, i)))
+        feature_current = tf.gather_nd(
+            params=target_feature, indices=tf.where(tf.equal(target_result, i)))
         current_target_class_centroid = tf.reduce_mean(feature_current, axis=0)
 
         current_class_result = tf.argmin(tf.reduce_sum(
             tf.square(current_target_class_centroid - source_centroid), axis=1), axis=0)
         final_result += tf.cast(current_class_result, tf.int32) * \
-            tf.cast(tf.reshape(tf.equal(target_result, i), [-1]), dtype=tf.int32)
+            tf.cast(tf.reshape(
+                tf.equal(target_result, i), [-1]), dtype=tf.int32)
         i += 1
         return target_feature, target_result, source_centroid, final_result, i, target_class_num
 
@@ -333,6 +336,52 @@ def caculate_final_result(result, neg_result):
 
 
 def main():
+    feature = tf.constant([
+        [	2143	,	1	]	,
+        [	787	,	1	]	,
+        [	894	,	1	]	,
+        [	1293	,	1	]	,
+        [	741	,	1	]	,
+        [	870	,	1	]	,
+        [	1258	,	1	]	,
+        [	2144	,	1	]	,
+        [	779	,	1	]	,
+        [	889	,	1	]	,
+        [	1248	,	1	]	,
+        [	2121	,	1	]	,
+        [	774	,	1	]	,
+        [	875	,	1	]	,
+        [	1254	,	1	]	,
+        [	2149	,	1	]	,
+        [	799	,	1	]	,
+        [	900	,	1	]	,
+        [	1267	,	1	]	,
+        [	788	,	1	]	,
+        [	914	,	1	]	,
+        [	1286	,	1	]	,
+        [	770	,	1	]	,
+        [	896	,	1	]	,
+        [	1267	,	1	]	,
+        [	799	,	1	]	,
+        [	904	,	1	]	,
+        [	1287	,	1	]	,
+        [	2149	,	1	]	,
+        [	808	,	1	]	,
+        [	897	,	1	]	,
+        [	1264	,	1	]	,
+        [	750	,	1	]	,
+        [	879	,	1	]	,
+        [	1264	,	1	]	,
+    ], dtype=tf.float32)
+    result = class_feature_use_graph(feature, k_neighbor=15, pca=False)
+
+    with tf.Session() as sess:
+        [result, feature] = sess.run([result, feature])
+    
+    result = np.array(result).reshape([-1])
+
+    for i in range(result.shape[0]):
+        print(result[i])
     """
     from test_tf import feature_read, feature_reduce_dimension, feature_caculate_distance
     import shutil
@@ -391,5 +440,5 @@ def main():
     """
 
 
-#if __name__ == "__main__":
-#    sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())
